@@ -2,16 +2,16 @@ import { Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 
-import { handleError } from "~/utils/errorHandler";
-import User, { IUser } from "~/models/user";
-import { UserRole } from "~/types/enums";
-import { generateEmailToken, generateOtp, sendEmail } from "~/utils";
+import { handleError } from "../utils/errorHandler";
+import User, { IUser } from "../models/user";
+import { UserRole } from "../types/enums";
+import { generateEmailToken, generateOtp, sendEmail } from "../utils";
 import {
   findUserByEmail,
   findUserWithToken,
   findUserWithUsername,
-} from "~/helpers";
-import { AuthenticatedRequest } from "~/middleware";
+} from "../helpers";
+import { AuthenticatedRequest } from "../middleware";
 
 const generateToken = (user: IUser): string => {
   return jwt.sign(

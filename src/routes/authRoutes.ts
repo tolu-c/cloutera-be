@@ -12,8 +12,8 @@ import {
   signUpUser,
   toggle2FA,
   verifyUserEmail,
-} from "~/controllers/auth";
-import { authenticateToken } from "~/middleware";
+} from "../controllers/auth";
+import { authenticateToken } from "../middleware";
 
 const router = express.Router();
 
