@@ -1,0 +1,38 @@
+{
+  "name": "cloutera-be",
+  "version": "1.0.0",
+  "description": "server for cloutera",
+  "main": "index.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node dist/index.js",
+    "dev": "ts-node -r tsconfig-paths/register src/index.ts",
+    "build": "tsc"
+  },
+  "keywords": [],
+  "author": "tolu-c <tolu.adeyemo7@gmail.com>",
+  "license": "ISC",
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "cors": "^2.8.5",
+    "dotenv": "^17.0.1",
+    "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.16.1",
+    "nodemailer": "^7.0.4",
+    "uuid": "^11.1.0"
+  },
+  "devDependencies": {
+    "@types/bcrypt": "^5.0.2",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.3",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/mongoose": "^5.11.97",
+    "@types/node": "^24.0.10",
+    "@types/nodemailer": "^6.4.17",
+    "prettier": "^3.6.2",
+    "ts-node": "^10.9.2",
+    "tsconfig-paths": "^4.2.0",
+    "typescript": "^5.8.3"
+  }
+}
