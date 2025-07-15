@@ -3,7 +3,6 @@ import express from "express";
 import {
   checkUsername,
   forgotPassword,
-  getUser,
   loginUser,
   loginWith2FA,
   resendVerificationEmail,
@@ -23,7 +22,7 @@ router.post("/login", loginUser);
 router.post("/login-2fa", loginWith2FA);
 router.post("/forgot-password", forgotPassword);
 router.post("/reset-password", resetPassword);
-router.get("/get-user", authenticateToken, getUser);
+// router.get("/get-user", authenticateToken, getUser);
 router.post("/sign-out", authenticateToken, signOutUser);
 router.post("/check-username", checkUsername);
 router.post("/resend", resendVerificationEmail);

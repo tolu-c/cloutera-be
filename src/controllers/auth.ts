@@ -58,7 +58,7 @@ export const signUpUser = async (req: Request, res: Response) => {
       `
        <h2>Welcome to Cloutera, Verify your Account</h2>
        <p>Click on the link below to verify your email</p>
-       <a href="${verifyAccountUrl}">Reset Password</a>
+       <a href="${verifyAccountUrl}">Verify your account</a>
       `,
     );
     res.status(201).json({
@@ -192,33 +192,6 @@ export const resetPassword = async (req: Request, res: Response) => {
 
     res.status(200).json({
       message: "Password reset successfully",
-    });
-  } catch (e) {
-    handleError(res, 500, "Server error");
-  }
-};
-
-export const getUser = async (req: AuthenticatedRequest, res: Response) => {
-  try {
-    const user = req.user;
-    if (!user) {
-      handleError(res, 401, "Unauthorized");
-      return;
-    }
-
-    const userDetails = await User.findOne({ email: user?.email }).select(
-      "-password -emailVerificationToken -emailVerificationExpires -twoFactorSecret -isBlocked",
-    );
-    if (!userDetails) {
-      handleError(res, 404, "User not found");
-      return;
-    }
-
-    res.status(200).json({
-      message: "User details",
-      data: {
-        user: userDetails,
-      },
     });
   } catch (e) {
     handleError(res, 500, "Server error");
