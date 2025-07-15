@@ -267,14 +267,13 @@ export const checkUsername = async (req: Request, res: Response) => {
     const user = await findUserWithUsername(username);
 
     if (user) {
-      res.status(200).json({
-        message: "Username is not available",
-      });
-    } else {
-      res.status(200).json({
-        message: "Username is available",
-      });
+      handleError(res, 400, "This username has been Taken");
+      return;
     }
+
+    res.status(200).json({
+      message: "Username is available",
+    });
   } catch (e) {
     handleError(res, 500, "Server error");
   }

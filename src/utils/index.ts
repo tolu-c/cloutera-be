@@ -9,7 +9,7 @@ export const generateOtp = (): string => {
   const numbers = "0123456789";
   let otp: string = "";
 
-  for (let i = 0; i < 4; i++) {
+  for (let i = 0; i < 6; i++) {
     otp += numbers[Math.floor(Math.random() * 10)];
   }
 
