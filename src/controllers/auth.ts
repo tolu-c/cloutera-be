@@ -15,7 +15,7 @@ import { AuthenticatedRequest } from "../middleware";
 
 const generateToken = (user: IUser): string => {
   return jwt.sign(
-    { email: user.email, userId: user._id },
+    { email: user.email, userId: user._id, role: user.role },
     process.env.JWT_SECRET as string,
     { expiresIn: "7days" },
   );
