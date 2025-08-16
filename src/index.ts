@@ -10,6 +10,8 @@ import authRoutes from "./routes/authRoutes";
 import profileRoutes from "./routes/profileRoutes";
 import faqRoutes from "./routes/faqsRoutes";
 import servicesRoutes from "./routes/servicesRoutes";
+import ordersRoutes from "./routes/ordersRoutes";
+import accountRoutes from "./routes/userAccount";
 import { servicesCronJob } from "./utils/cron";
 
 dotenv.config();
@@ -100,6 +102,8 @@ app.use("/api/auth", authRoutes);
 app.use("/api/profile", profileRoutes);
 app.use("/api/faqs", faqRoutes);
 app.use("/api/services", servicesRoutes);
+app.use("/api/orders", ordersRoutes);
+app.use("/api/account", accountRoutes);
 
 mongoose
   .connect(mongoUri)

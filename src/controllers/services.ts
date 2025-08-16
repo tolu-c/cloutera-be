@@ -160,3 +160,41 @@ export const getServicesCategories = async (
     );
   }
 };
+
+export const getServiceById = async (
+  req: AuthenticatedRequest,
+  res: Response,
+) => {
+  try {
+    const user = req.user;
+    const { serviceId } = req.params;
+    if (!user) {
+      handleError(res, 401, "Unauthorized");
+      return;
+    }
+
+    if (!serviceId) {
+      handleError(res, 400, "Service ID is required");
+      return;
+    }
+
+    const service = await Service.findOne({ serviceId, isActive: true });
+
+    if (!service) {
+      handleError(res, 404, "Service not found");
+      return;
+    }
+
+    res.status(200).json({
+      message: "success",
+      success: true,
+      data: service,
+    });
+  } catch (error) {
+    handleError(
+      res,
+      500,
+      `${error instanceof Error ? error.message : "Error fetching services"}`,
+    );
+  }
+};

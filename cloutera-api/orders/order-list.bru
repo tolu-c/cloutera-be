@@ -1,0 +1,21 @@
+meta {
+  name: order-list
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{host}}/orders/list?limit=50&status=Pending
+  body: none
+  auth: inherit
+}
+
+params:query {
+  limit: 50
+  status: Pending
+  ~search: tiktok
+}
+
+settings {
+  encodeUrl: true
+}

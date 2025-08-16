@@ -1,0 +1,15 @@
+meta {
+  name: account-status
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{host}}/account/status
+  body: none
+  auth: inherit
+}
+
+settings {
+  encodeUrl: true
+}

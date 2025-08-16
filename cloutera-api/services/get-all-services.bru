@@ -1,0 +1,20 @@
+meta {
+  name: get-all-services
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{host}}/services?limit=10&search=Twitter
+  body: none
+  auth: inherit
+}
+
+params:query {
+  limit: 10
+  search: Twitter
+}
+
+settings {
+  encodeUrl: true
+}

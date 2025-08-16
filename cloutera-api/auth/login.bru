@@ -1,0 +1,22 @@
+meta {
+  name: login
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{host}}/auth/login
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "email":"webdevtolu@protonmail.com",
+    "password": "password"
+  }
+}
+
+settings {
+  encodeUrl: true
+}

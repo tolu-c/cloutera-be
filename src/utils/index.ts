@@ -19,6 +19,10 @@ export const generateOtp = (): string => {
 export const sendEmail = async (to: string, subject: string, html: string) => {
   try {
     const transporter = nodemailer.createTransport({
+      pool: true,
+      maxConnections: 5,
+      maxMessages: 100,
+      connectionTimeout: 5000,
       service: "gmail",
       auth: {
         user: process.env.GMAIL_USER,

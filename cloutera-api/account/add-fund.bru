@@ -1,0 +1,21 @@
+meta {
+  name: add-fund
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{host}}/account/add-fund
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "amount":50
+  }
+}
+
+settings {
+  encodeUrl: true
+}

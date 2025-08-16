@@ -12,6 +12,7 @@ import {
   findUserWithUsername,
 } from "../helpers";
 import { AuthenticatedRequest } from "../middleware";
+import { SALT_ROUNDS } from "../constants";
 
 const generateToken = (user: IUser): string => {
   return jwt.sign(
@@ -37,7 +38,7 @@ export const signUpUser = async (req: Request, res: Response) => {
       handleError(res, 400, "User already exists");
     }
 
-    const hashPassword = await bcrypt.hash(password, 18);
+    const hashPassword = await bcrypt.hash(password, SALT_ROUNDS);
 
     const user = new User({
       username,
@@ -51,8 +52,13 @@ export const signUpUser = async (req: Request, res: Response) => {
     await user.save();
 
     const verifyAccountUrl = `${clientUrl}/verify-account/${email}/${user.emailVerificationToken}`;
+
+    res.status(201).json({
+      message: "User successfully created",
+    });
+
     // send email
-    await sendEmail(
+    sendEmail(
       user.email,
       "Welcome to Cloutera",
       `
@@ -61,9 +67,6 @@ export const signUpUser = async (req: Request, res: Response) => {
        <a href="${verifyAccountUrl}">Verify your account</a>
       `,
     );
-    res.status(201).json({
-      message: "User successfully created",
-    });
   } catch (error) {
     handleError(res, 500, "Server error");
   }
@@ -98,7 +101,9 @@ export const loginUser = async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
 
+    const t0 = Date.now();
     const user = await findUserByEmail(email);
+    console.log(Date.now() - t0);
 
     if (!user) {
       handleError(res, 400, "Invalid credentials");
@@ -117,17 +122,6 @@ export const loginUser = async (req: Request, res: Response) => {
 
     const token = generateToken(user);
 
-    if (user.twoFactorEnabled) {
-      user.twoFactorSecret = generateOtp();
-      await user.save();
-
-      await sendEmail(
-        email,
-        "2FA code",
-        `Your 2FA code: ${user.twoFactorSecret}`,
-      );
-    }
-
     res.status(200).json({
       message: "User successfully logged in",
       data: {
@@ -136,6 +130,13 @@ export const loginUser = async (req: Request, res: Response) => {
         twoFactorEnabled: user.twoFactorEnabled,
       },
     });
+
+    if (user.twoFactorEnabled) {
+      user.twoFactorSecret = generateOtp();
+      await user.save();
+
+      sendEmail(email, "2FA code", `Your 2FA code: ${user.twoFactorSecret}`);
+    }
   } catch (e) {
     handleError(res, 500, "Server error");
   }
@@ -156,7 +157,12 @@ export const forgotPassword = async (req: Request, res: Response) => {
 
     // send email
     const resetPasswordUrl = `${clientUrl}/reset-password/${email}/${user.emailVerificationToken}`;
-    await sendEmail(
+
+    res.status(200).json({
+      message: "Verification Email sent",
+    });
+
+    sendEmail(
       email,
       "Reset Password",
       `
@@ -165,10 +171,6 @@ export const forgotPassword = async (req: Request, res: Response) => {
     <a href="${resetPasswordUrl}">Reset Password</a>
     `,
     );
-
-    res.status(200).json({
-      message: "Verification Email sent",
-    });
   } catch (e) {
     handleError(res, 500, "Server error");
   }
@@ -185,7 +187,7 @@ export const resetPassword = async (req: Request, res: Response) => {
       return;
     }
 
-    user.password = await bcrypt.hash(password, 18);
+    user.password = await bcrypt.hash(password, SALT_ROUNDS);
     user.emailVerificationToken = null;
     user.emailVerificationExpires = null;
     await user.save();

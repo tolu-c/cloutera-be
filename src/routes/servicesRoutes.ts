@@ -1,6 +1,10 @@
 import express from "express";
 import { authenticateToken } from "../middleware";
-import { getAllServices, getServicesCategories } from "../controllers/services";
+import {
+  getAllServices,
+  getServiceById,
+  getServicesCategories,
+} from "../controllers/services";
 
 const router = express.Router();
 
@@ -13,5 +17,6 @@ const router = express.Router();
 
 router.get("/", authenticateToken, getAllServices);
 router.get("/categories", authenticateToken, getServicesCategories);
+router.get("/:serviceId", authenticateToken, getServiceById);
 
 export default router;

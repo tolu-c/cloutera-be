@@ -1,0 +1,19 @@
+meta {
+  name: get-service-by-id
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{host}}/services/:serviceId
+  body: none
+  auth: inherit
+}
+
+params:path {
+  serviceId: 1811
+}
+
+settings {
+  encodeUrl: true
+}
