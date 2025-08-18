@@ -1,6 +1,10 @@
 import { Router } from "express";
 import { authenticateToken } from "../middleware";
-import { addFund, getAccountStatus } from "../controllers/userAccount";
+import {
+  addFund,
+  getAccountStatus,
+  getFundsHistory,
+} from "../controllers/userAccount";
 
 const router = Router();
 
@@ -10,5 +14,6 @@ router.use(authenticateToken);
 router.get("/status", getAccountStatus);
 
 router.post("/add-fund", addFund);
+router.get("/funds/history", getFundsHistory);
 
 export default router;

@@ -5,6 +5,7 @@ import dotenv from "dotenv";
 import passport from "passport";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import session from "express-session";
+import MongoStore from "connect-mongo";
 
 import authRoutes from "./routes/authRoutes";
 import profileRoutes from "./routes/profileRoutes";
@@ -23,6 +24,9 @@ interface User {
   photo: string;
 }
 
+const port = process.env.PORT || 4000;
+const mongoUri = process.env.MONGO_URI as string;
+
 const app = express();
 
 app.use(
@@ -30,6 +34,9 @@ app.use(
     secret: process.env.SESSION_SECRET as string,
     resave: false,
     saveUninitialized: false,
+    store: MongoStore.create({
+      mongoUrl: mongoUri,
+    }),
   }),
 );
 
@@ -78,9 +85,6 @@ passport.use(
 passport.deserializeUser((user: User, done) => {
   done(null, user);
 });
-
-const port = process.env.PORT || 4000;
-const mongoUri = process.env.MONGO_URI as string;
 
 app.use(express.json());
 app.use(cors());

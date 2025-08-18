@@ -1,0 +1,15 @@
+meta {
+  name: funds-history
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{host}}/account/funds/history
+  body: none
+  auth: inherit
+}
+
+settings {
+  encodeUrl: true
+}

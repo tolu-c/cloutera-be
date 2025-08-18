@@ -3,17 +3,19 @@ import { Response } from "express";
 import User from "../models/user";
 import { handleError } from "../utils/errorHandler";
 
-export const findUserByEmail = async (email: string) => {
-  return User.findOne({ email });
-};
+export const findUserByEmail = (email: string) =>
+  User.findOne({ email: email.toLowerCase() }).select(
+    "+password +twoFactorSecret",
+  );
 
-export const findUserWithToken = async (email: string, token: string) => {
-  return User.findOne({ email, emailVerificationToken: token });
-};
+export const findUserWithToken = (email: string, token: string) =>
+  User.findOne({
+    email: email.toLowerCase(),
+    emailVerificationToken: token,
+  }).select("+password");
 
-export const findUserWithUsername = async (username: string) => {
-  return User.findOne({ username });
-};
+export const findUserWithUsername = (username: string) =>
+  User.findOne({ username });
 
 export const validateIds = (id: string, res: Response) => {
   if (!mongoose.Types.ObjectId.isValid(id)) {
