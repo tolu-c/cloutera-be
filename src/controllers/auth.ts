@@ -128,6 +128,7 @@ export const loginUser = async (req: Request, res: Response) => {
         token,
         isVerified: user.isVerified,
         twoFactorEnabled: user.twoFactorEnabled,
+        role: user.role
       },
     });
 
@@ -301,6 +302,7 @@ export const loginWith2FA = async (req: Request, res: Response) => {
         token,
         isVerified: user.isVerified,
         twoFactorEnabled: user.twoFactorEnabled,
+        role: user.role
       },
     });
   } catch (e) {
