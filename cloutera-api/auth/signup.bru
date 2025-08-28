@@ -1,0 +1,26 @@
+meta {
+  name: signup
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{host}}/auth/signup
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "email":"webdevtolu+test44@protonmail.com",
+    "username":"username",
+    "firstName":"Tolu",
+    "lastName":"Test",
+    "role":"Admin",
+    "password":"asdf:lkj"
+  }
+}
+
+settings {
+  encodeUrl: true
+}

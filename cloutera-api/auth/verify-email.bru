@@ -1,0 +1,22 @@
+meta {
+  name: verify-email
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{host}}/auth/verify-email
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "email": "webdevtolu+test44@protonmail.com",
+    "token": "0c88e74a-9e33-4e6f-8ced-f2fb8adce8ec"
+  }
+}
+
+settings {
+  encodeUrl: true
+}
