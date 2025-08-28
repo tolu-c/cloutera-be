@@ -5,7 +5,12 @@ import bcrypt from "bcrypt";
 import { handleError } from "../utils/errorHandler";
 import User, { IUser } from "../models/user";
 import { UserRole } from "../types/enums";
-import { generateEmailToken, generateOtp, sendEmail } from "../utils";
+import {
+  generateEmailToken,
+  generateOtp,
+  sendEmail,
+  sendEmailQueue,
+} from "../utils";
 import {
   findUserByEmail,
   findUserWithToken,
@@ -13,6 +18,7 @@ import {
 } from "../helpers";
 import { AuthenticatedRequest } from "../middleware";
 import { SALT_ROUNDS } from "../constants";
+import { redisClient } from "../index";
 
 const generateToken = (user: IUser): string => {
   return jwt.sign(
@@ -28,8 +34,10 @@ export const signUpUser = async (req: Request, res: Response) => {
   try {
     const { username, email, firstName, lastName, password, role } = req.body;
 
-    const existingUser = await findUserByEmail(email);
-    const existingUsername = await User.findOne({ username });
+    const [existingUser, existingUsername] = await Promise.all([
+      findUserByEmail(email),
+      User.findOne({ username }),
+    ]);
 
     if (existingUsername) {
       handleError(res, 400, "Username already exists");
@@ -57,18 +65,17 @@ export const signUpUser = async (req: Request, res: Response) => {
       message: "User successfully created",
     });
 
-    // send email
-    sendEmail(
-      user.email,
-      "Welcome to Cloutera",
-      `
-       <h2>Welcome to Cloutera, Verify your Account</h2>
-       <p>Click on the link below to verify your email</p>
-       <a href="${verifyAccountUrl}">Verify your account</a>
+    await sendEmailQueue.add({
+      to: user.email,
+      subject: "Welcome to Cloutera",
+      html: `
+        <h2>Welcome to Cloutera, Verify your Account</h2>
+        <p>Click on the link below to verify your email</p>
+        <a href="${verifyAccountUrl}">Verify your account</a>
       `,
-    );
+    });
   } catch (error) {
-    handleError(res, 500, "Server error");
+    handleError(res, 500, `Server error: ${error}`);
   }
 };
 
@@ -76,7 +83,9 @@ export const verifyUserEmail = async (req: Request, res: Response) => {
   try {
     const { token, email } = req.body;
 
-    const user = await findUserWithToken(email, token);
+    const user = await findUserWithToken(email, token).select(
+      "emailVerificationToken emailVerificationExpires isVerified",
+    );
 
     if (!user) {
       handleError(res, 400, "Invalid Token");
@@ -102,8 +111,11 @@ export const loginUser = async (req: Request, res: Response) => {
     const { email, password } = req.body;
 
     const t0 = Date.now();
-    const user = await findUserByEmail(email);
-    console.log(Date.now() - t0);
+
+    const user = await findUserByEmail(email).select(
+      "+password +twoFactorEnabled +twoFactorSecret +isVerified +role",
+    );
+    console.log(`findUserByEmail: ${Date.now() - t0}ms`);
 
     if (!user) {
       handleError(res, 400, "Invalid credentials");
@@ -113,14 +125,18 @@ export const loginUser = async (req: Request, res: Response) => {
       handleError(res, 400, "Please verify your email");
       return;
     }
-
+    const t1 = Date.now();
     const isPasswordValid = await bcrypt.compare(password, user.password);
+    console.log(`bcrypt.compare: ${Date.now() - t1}ms`);
+
     if (!isPasswordValid) {
       handleError(res, 400, "Invalid credentials");
       return;
     }
 
+    const t2 = Date.now();
     const token = generateToken(user);
+    console.log(`generateToken: ${Date.now() - t2}ms`);
 
     res.status(200).json({
       message: "User successfully logged in",
@@ -128,15 +144,23 @@ export const loginUser = async (req: Request, res: Response) => {
         token,
         isVerified: user.isVerified,
         twoFactorEnabled: user.twoFactorEnabled,
-        role: user.role
+        role: user.role,
       },
     });
 
     if (user.twoFactorEnabled) {
-      user.twoFactorSecret = generateOtp();
-      await user.save();
+      const t3 = Date.now();
+      const twoFactorSecret = generateOtp();
+      await User.updateOne({ _id: user._id }, { twoFactorSecret });
+      console.log(`update 2FA: ${Date.now() - t3}ms`);
 
-      sendEmail(email, "2FA code", `Your 2FA code: ${user.twoFactorSecret}`);
+      const t4 = Date.now();
+      await sendEmailQueue.add({
+        to: email,
+        subject: "2FA code",
+        html: `Your 2FA code: ${twoFactorSecret}`,
+      });
+      console.log(`email queue: ${Date.now() - t4}ms`);
     }
   } catch (e) {
     handleError(res, 500, "Server error");
@@ -152,9 +176,13 @@ export const forgotPassword = async (req: Request, res: Response) => {
       handleError(res, 404, "User not found");
       return;
     }
-    user.emailVerificationToken = generateEmailToken();
-    // save token expiry too
-    await user.save();
+    const token = generateEmailToken();
+    const expires = new Date(Date.now() + 3600000); // 1 hour expiry
+
+    await User.updateOne(
+      { email },
+      { emailVerificationToken: token, emailVerificationExpires: expires },
+    );
 
     // send email
     const resetPasswordUrl = `${clientUrl}/reset-password/${email}/${user.emailVerificationToken}`;
@@ -163,17 +191,27 @@ export const forgotPassword = async (req: Request, res: Response) => {
       message: "Verification Email sent",
     });
 
-    sendEmail(
-      email,
-      "Reset Password",
-      `
-    <h2>Reset Password</h2>
-    <p>Click on the link below to reset your password</p>
-    <a href="${resetPasswordUrl}">Reset Password</a>
-    `,
-    );
+    await sendEmailQueue.add({
+      to: email,
+      subject: "Reset Password",
+      html: `
+        <h2>Reset Password</h2>
+        <p>Click on the link below to reset your password</p>
+        <a href="${resetPasswordUrl}">Reset Password</a>
+      `,
+    });
+
+    // await sendEmail(
+    //   email,
+    //   "Reset Password",
+    //   `
+    // <h2>Reset Password</h2>
+    // <p>Click on the link below to reset your password</p>
+    // <a href="${resetPasswordUrl}">Reset Password</a>
+    // `,
+    // );
   } catch (e) {
-    handleError(res, 500, "Server error");
+    handleError(res, 500, `Server error: ${e}`);
   }
 };
 
@@ -302,7 +340,7 @@ export const loginWith2FA = async (req: Request, res: Response) => {
         token,
         isVerified: user.isVerified,
         twoFactorEnabled: user.twoFactorEnabled,
-        role: user.role
+        role: user.role,
       },
     });
   } catch (e) {

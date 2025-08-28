@@ -251,7 +251,7 @@ export const getFundsHistory = async (
     } = req.query;
 
     // Build match conditions
-    const matchConditions: any = { userId: user._id };
+    const matchConditions: any = { userId: user.userId };
 
     // Add filters
     if (status) {
@@ -343,32 +343,30 @@ export const getFundsHistory = async (
 
     res.status(200).json({
       success: true,
-      data: {
-        transactions,
-        pagination: {
-          currentPage: pageNum,
-          totalPages,
-          totalCount,
-          limit: limitNum,
-          hasNextPage,
-          hasPrevPage,
-        },
-        summary: {
-          totalCredits: summary.totalCredits,
-          totalDebits: summary.totalDebits,
-          netAmount: summary.totalCredits - summary.totalDebits,
-          totalTransactions: summary.totalTransactions,
-        },
-        filters: {
-          search,
-          status,
-          type,
-          paymentMethod,
-          startDate,
-          endDate,
-          sortBy: sortField,
-          sortOrder,
-        },
+      data: transactions,
+      pagination: {
+        currentPage: pageNum,
+        totalPages,
+        totalCount,
+        limit: limitNum,
+        hasNextPage,
+        hasPrevPage,
+      },
+      summary: {
+        totalCredits: summary.totalCredits,
+        totalDebits: summary.totalDebits,
+        netAmount: summary.totalCredits - summary.totalDebits,
+        totalTransactions: summary.totalTransactions,
+      },
+      filters: {
+        search,
+        status,
+        type,
+        paymentMethod,
+        startDate,
+        endDate,
+        sortBy: sortField,
+        sortOrder,
       },
     });
   } catch (error) {
