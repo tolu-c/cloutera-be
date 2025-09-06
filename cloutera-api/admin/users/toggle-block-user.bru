@@ -1,0 +1,19 @@
+meta {
+  name: toggle-block-user
+  type: http
+  seq: 3
+}
+
+patch {
+  url: {{host}}/admin/users/:id/block
+  body: none
+  auth: inherit
+}
+
+params:path {
+  id: 687643e1503619844bbb3c71
+}
+
+settings {
+  encodeUrl: true
+}

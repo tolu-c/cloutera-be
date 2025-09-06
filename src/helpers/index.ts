@@ -4,9 +4,9 @@ import User from "../models/user";
 import { handleError } from "../utils/errorHandler";
 
 export const findUserByEmail = (email: string) =>
-  User.findOne({ email: email.toLowerCase() }).select(
-    "+password +twoFactorSecret",
-  ).lean();
+  User.findOne({ email: email.toLowerCase() })
+    .select("+password +twoFactorSecret")
+    .lean();
 
 export const findUserWithToken = (email: string, token: string) =>
   User.findOne({
@@ -22,4 +22,8 @@ export const validateIds = (id: string, res: Response) => {
     handleError(res, 400, "Invalid ID");
     return;
   }
+};
+
+export const findUserById = async (id: string) => {
+  return User.findById(id).select("-__v").lean();
 };

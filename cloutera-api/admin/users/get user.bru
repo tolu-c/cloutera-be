@@ -1,0 +1,19 @@
+meta {
+  name: get user
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{host}}/admin/users/:id
+  body: none
+  auth: inherit
+}
+
+params:path {
+  id: 68b3f6e3a71d8ab53fb0aec3
+}
+
+settings {
+  encodeUrl: true
+}

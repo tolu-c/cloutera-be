@@ -1,0 +1,19 @@
+meta {
+  name: get user orders
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{host}}/admin/users/:id/orders
+  body: none
+  auth: inherit
+}
+
+params:path {
+  id: 6891bb6f00ca5b577e92f515
+}
+
+settings {
+  encodeUrl: true
+}

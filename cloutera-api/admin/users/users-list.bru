@@ -1,0 +1,20 @@
+meta {
+  name: users-list
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{host}}/admin/users?search=username
+  body: none
+  auth: inherit
+}
+
+params:query {
+  search: username
+  ~status: Active
+}
+
+settings {
+  encodeUrl: true
+}

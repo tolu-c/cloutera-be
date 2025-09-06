@@ -1,0 +1,15 @@
+meta {
+  name: dashboard-trends
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{host}}/admin/dashboard/trends
+  body: none
+  auth: inherit
+}
+
+settings {
+  encodeUrl: true
+}

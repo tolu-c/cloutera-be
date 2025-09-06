@@ -1,0 +1,15 @@
+meta {
+  name: users stats
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{host}}/admin/users/stats
+  body: none
+  auth: inherit
+}
+
+settings {
+  encodeUrl: true
+}

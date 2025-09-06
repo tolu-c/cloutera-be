@@ -28,6 +28,7 @@ export interface ServiceQuery {
 }
 
 export interface PaginatedResponse<T> {
+  message?:string
   success: boolean;
   data: T[];
   pagination: {
@@ -39,4 +40,11 @@ export interface PaginatedResponse<T> {
     hasPrev: boolean;
   };
   filters?: any;
+}
+
+export interface UserStats {
+  total: number;
+  active: number;
+  inactive: number;
+  blocked: number;
 }

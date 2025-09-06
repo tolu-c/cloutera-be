@@ -5,12 +5,7 @@ import bcrypt from "bcrypt";
 import { handleError } from "../utils/errorHandler";
 import User, { IUser } from "../models/user";
 import { UserRole } from "../types/enums";
-import {
-  generateEmailToken,
-  generateOtp,
-  sendEmail,
-  sendEmailQueue,
-} from "../utils";
+import { generateEmailToken, generateOtp, sendEmailQueue } from "../utils";
 import {
   findUserByEmail,
   findUserWithToken,
@@ -18,7 +13,6 @@ import {
 } from "../helpers";
 import { AuthenticatedRequest } from "../middleware";
 import { SALT_ROUNDS } from "../constants";
-import { redisClient } from "../index";
 
 const generateToken = (user: IUser): string => {
   return jwt.sign(

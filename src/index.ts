@@ -5,8 +5,7 @@ import dotenv from "dotenv";
 import passport from "passport";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import session from "express-session";
-// import RedisStore from "connect-redis";
-import { createClient } from "redis";
+import MongoStore from "connect-mongo";
 
 import authRoutes from "./routes/authRoutes";
 import profileRoutes from "./routes/profileRoutes";
@@ -14,8 +13,8 @@ import faqRoutes from "./routes/faqsRoutes";
 import servicesRoutes from "./routes/servicesRoutes";
 import ordersRoutes from "./routes/ordersRoutes";
 import accountRoutes from "./routes/userAccount";
+import adminRoutes from "./routes/adminRoutes";
 import { servicesCronJob } from "./utils/cron";
-import { RedisStore } from "connect-redis";
 
 dotenv.config();
 
@@ -28,25 +27,17 @@ interface User {
 
 const port = process.env.PORT || 4000;
 const mongoUri = process.env.MONGO_URI as string;
-const redisUri = process.env.REDIS_URI || "redis://localhost:6379";
 
 const app = express();
 
-// Initialize Redis client
-export const redisClient = createClient({ url: redisUri });
-redisClient.connect().then(()=> console.log('redis connected')).catch(console.error);
-
-let redisStore = new RedisStore({
-  client: redisClient,
-  prefix: "myapp:",
-})
 app.use(
   session({
     secret: process.env.SESSION_SECRET as string,
     resave: false,
     saveUninitialized: false,
-    store: redisStore,
-    cookie: { maxAge: 24 * 60 * 60 * 1000 }, // 1 day
+    store: MongoStore.create({
+      mongoUrl: mongoUri,
+    }),
   }),
 );
 
@@ -118,6 +109,7 @@ app.use("/api/faqs", faqRoutes);
 app.use("/api/services", servicesRoutes);
 app.use("/api/orders", ordersRoutes);
 app.use("/api/account", accountRoutes);
+app.use("/api/admin", adminRoutes);
 
 mongoose
   .connect(mongoUri)

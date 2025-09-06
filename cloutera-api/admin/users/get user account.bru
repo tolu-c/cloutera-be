@@ -1,0 +1,19 @@
+meta {
+  name: get user account
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{host}}/admin/users/:id/account
+  body: none
+  auth: inherit
+}
+
+params:path {
+  id: 
+}
+
+settings {
+  encodeUrl: true
+}

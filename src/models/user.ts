@@ -34,7 +34,7 @@
 // export default mongoose.model<IUser>("User", userSchema);
 
 import mongoose, { Document, Schema } from "mongoose";
-import { UserRole } from "../types/enums";
+import { UserRole, UserStatus } from "../types/enums";
 
 export interface IUser extends Document {
   username: string;
@@ -44,6 +44,7 @@ export interface IUser extends Document {
   password: string;
   isVerified: boolean;
   role: UserRole;
+  status: UserStatus;
   emailVerificationToken?: string | null;
   emailVerificationExpires?: Date | null;
   twoFactorEnabled: boolean;
@@ -79,12 +80,14 @@ const userSchema = new Schema<IUser>(
       index: true,
     },
     role: { type: String, default: UserRole.Customer },
+    status: { type: String, default: UserStatus.Active },
     emailVerificationToken: {
       type: String,
       sparse: true,
       index: true,
+      select: false,
     },
-    emailVerificationExpires: { type: Date },
+    emailVerificationExpires: { type: Date, select: false },
     twoFactorEnabled: { type: Boolean, default: false },
     twoFactorSecret: { type: String, select: false },
     isBlocked: { type: Boolean, default: false },

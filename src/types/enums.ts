@@ -2,6 +2,10 @@ export enum UserRole {
   Customer = "Customer",
   Admin = "Admin",
 }
+export enum UserStatus {
+  Active = "Active",
+  Inactive = "Inactive",
+}
 
 export enum Sort {
   Asc = "asc",
