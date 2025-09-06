@@ -21,23 +21,23 @@ export const generateOtp = (): string => {
   return otp;
 };
 
-const transporter = nodemailer.createTransport({
-  pool: true,
-  secure: false,
-  maxConnections: 5,
-  maxMessages: 100,
-  connectionTimeout: 30000,
-  greetingTimeout: 30000,
-  service: "gmail",
-  auth: {
-    user: process.env.GMAIL_USER,
-    pass: process.env.GMAIL_PASSWORD,
-  },
-});
-
- sendEmailQueue.process(async (job: Job) => {
+sendEmailQueue.process(async (job: Job) => {
   const { to, subject, html } = job.data;
   try {
+    const transporter = nodemailer.createTransport({
+      pool: true,
+      secure: false,
+      maxConnections: 5,
+      maxMessages: 100,
+      connectionTimeout: 30000,
+      greetingTimeout: 30000,
+      service: "gmail",
+      auth: {
+        user: process.env.GMAIL_USER,
+        pass: process.env.GMAIL_PASSWORD,
+      },
+    });
+
     await transporter.sendMail({
       from: `Cloutera <${process.env.GMAIL_USER}>`,
       to,
@@ -52,6 +52,20 @@ const transporter = nodemailer.createTransport({
 });
 export const sendEmail = async (to: string, subject: string, html: string) => {
   try {
+    const transporter = nodemailer.createTransport({
+      pool: true,
+      secure: false,
+      maxConnections: 5,
+      maxMessages: 100,
+      connectionTimeout: 30000,
+      greetingTimeout: 30000,
+      service: "gmail",
+      auth: {
+        user: process.env.GMAIL_USER,
+        pass: process.env.GMAIL_PASSWORD,
+      },
+    });
+
     await transporter
       .sendMail({
         from: `Cloutera <${process.env.GMAIL_USER}>`,

@@ -5,7 +5,12 @@ import bcrypt from "bcrypt";
 import { handleError } from "../utils/errorHandler";
 import User, { IUser } from "../models/user";
 import { UserRole } from "../types/enums";
-import { generateEmailToken, generateOtp, sendEmailQueue } from "../utils";
+import {
+  generateEmailToken,
+  generateOtp,
+  sendEmail,
+  sendEmailQueue,
+} from "../utils";
 import {
   findUserByEmail,
   findUserWithToken,
@@ -55,18 +60,18 @@ export const signUpUser = async (req: Request, res: Response) => {
 
     const verifyAccountUrl = `${clientUrl}/verify-account/${email}/${user.emailVerificationToken}`;
 
-    res.status(201).json({
-      message: "User successfully created",
-    });
-
-    await sendEmailQueue.add({
-      to: user.email,
-      subject: "Welcome to Cloutera",
-      html: `
-        <h2>Welcome to Cloutera, Verify your Account</h2>
+    await sendEmail(
+      user.email,
+      "Welcome to Cloutera",
+      `
+<h2>Welcome to Cloutera, Verify your Account</h2>
         <p>Click on the link below to verify your email</p>
         <a href="${verifyAccountUrl}">Verify your account</a>
-      `,
+    `,
+    );
+
+    res.status(201).json({
+      message: "User successfully created",
     });
   } catch (error) {
     handleError(res, 500, `Server error: ${error}`);
