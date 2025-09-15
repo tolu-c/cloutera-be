@@ -1,6 +1,7 @@
 import express from "express";
 import { authenticateAdmin } from "../middleware";
 import {
+  deleteUser,
   getCustomerAccountStatus,
   getUserById,
   getUserOrders,
@@ -23,6 +24,7 @@ router.get("/users/:id", authenticateAdmin, getUserById);
 router.patch("/users/:id/block", authenticateAdmin, toggleBlockUser);
 router.get("/users/:id/orders", authenticateAdmin, getUserOrders);
 router.get("/users/:id/account", authenticateAdmin, getCustomerAccountStatus);
+router.delete("/users/:id/delete", authenticateAdmin, deleteUser);
 router.get("/orders/list", authenticateAdmin, getOrdersList);
 router.get("/orders/stats", authenticateAdmin, getOrdersStats);
 router.get("/dashboard/stats", authenticateAdmin, getDashboardStats);

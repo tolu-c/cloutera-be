@@ -5,6 +5,7 @@ export enum UserRole {
 export enum UserStatus {
   Active = "Active",
   Inactive = "Inactive",
+  Blocked = "Blocked",
 }
 
 export enum Sort {

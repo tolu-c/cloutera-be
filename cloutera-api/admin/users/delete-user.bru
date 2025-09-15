@@ -1,0 +1,19 @@
+meta {
+  name: delete-user
+  type: http
+  seq: 7
+}
+
+delete {
+  url: {{host}}/admin/users/:id/delete
+  body: none
+  auth: inherit
+}
+
+params:path {
+  id: 68bc8e3d87d4c4c8f3046c5f
+}
+
+settings {
+  encodeUrl: true
+}

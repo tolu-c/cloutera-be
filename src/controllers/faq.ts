@@ -11,7 +11,7 @@ export const getAllFaqs = async (req: Request, res: Response) => {
 
     res.status(200).json({
       message: "Faqs fetched successfully",
-      faqs,
+      data: faqs,
     });
   } catch (error) {
     handleError(res, 500, "Server error");
@@ -36,7 +36,9 @@ export const getSingleFaq = async (req: Request, res: Response) => {
 
     res.status(200).json({
       message: "success",
-      faq,
+      data: {
+        faq,
+      },
     });
   } catch (error) {
     console.log(error);
@@ -71,6 +73,7 @@ export const addFaq = async (req: AuthenticatedRequest, res: Response) => {
 
     res.status(201).json({
       message: "Faq added!",
+      success: true,
     });
   } catch {
     handleError(res, 500, "Failed to Add Faq");
@@ -114,7 +117,8 @@ export const editFaq = async (req: AuthenticatedRequest, res: Response) => {
 
     res.status(200).json({
       message: "Updated Faq!",
-      faq,
+      success: true,
+      data: faq,
     });
   } catch {
     handleError(res, 500, "Failed to edit faq");

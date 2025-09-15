@@ -1,0 +1,15 @@
+meta {
+  name: faq-list
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{host}}/faqs/
+  body: none
+  auth: inherit
+}
+
+settings {
+  encodeUrl: true
+}

@@ -1,0 +1,22 @@
+meta {
+  name: add-faq
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{host}}/faqs/add
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "question":"hello",
+    "answer":"hi"
+  }
+}
+
+settings {
+  encodeUrl: true
+}

@@ -173,6 +173,7 @@ export const toggleBlockUser = async (
 
     await User.findByIdAndUpdate(id, {
       isBlocked: !user.isBlocked,
+      status: user.isBlocked ? UserStatus.Active : UserStatus.Blocked,
     });
 
     res.status(200).json({
@@ -369,3 +370,28 @@ export const getCustomerAccountStatus = async (
     handleError(res, 500, `Server error: ${e}`);
   }
 };
+
+export async function deleteUser(req: AuthenticatedRequest, res: Response) {
+  try {
+    const { id } = req.params;
+
+    const user = await findUserById(id);
+
+    if (!user) {
+      return handleError(res, 404, "User not found");
+    }
+
+    if (user._id.toString() === req.user.userId) {
+      handleError(res, 400, "cannot block yourself");
+    }
+
+    await User.findByIdAndDelete(id);
+
+    res.status(200).json({
+      success: true,
+      message: "User deleted",
+    });
+  } catch (e) {
+    handleError(res, 500, `Server error: ${e}`);
+  }
+}

@@ -109,12 +109,9 @@ export const loginUser = async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
 
-    const t0 = Date.now();
-
     const user = await findUserByEmail(email).select(
       "+password +twoFactorEnabled +twoFactorSecret +isVerified +role",
     );
-    console.log(`findUserByEmail: ${Date.now() - t0}ms`);
 
     if (!user) {
       handleError(res, 400, "Invalid credentials");
@@ -124,18 +121,19 @@ export const loginUser = async (req: Request, res: Response) => {
       handleError(res, 400, "Please verify your email");
       return;
     }
-    const t1 = Date.now();
     const isPasswordValid = await bcrypt.compare(password, user.password);
-    console.log(`bcrypt.compare: ${Date.now() - t1}ms`);
 
     if (!isPasswordValid) {
       handleError(res, 400, "Invalid credentials");
       return;
     }
 
-    const t2 = Date.now();
+    if (user.isBlocked) {
+      handleError(res, 400, "You are already blocked. Contact Admin to login");
+      return;
+    }
+
     const token = generateToken(user);
-    console.log(`generateToken: ${Date.now() - t2}ms`);
 
     res.status(200).json({
       message: "User successfully logged in",
@@ -144,22 +142,19 @@ export const loginUser = async (req: Request, res: Response) => {
         isVerified: user.isVerified,
         twoFactorEnabled: user.twoFactorEnabled,
         role: user.role,
+        isBlocked: user.isBlocked,
       },
     });
 
     if (user.twoFactorEnabled) {
-      const t3 = Date.now();
       const twoFactorSecret = generateOtp();
       await User.updateOne({ _id: user._id }, { twoFactorSecret });
-      console.log(`update 2FA: ${Date.now() - t3}ms`);
 
-      const t4 = Date.now();
       await sendEmailQueue.add({
         to: email,
         subject: "2FA code",
         html: `Your 2FA code: ${twoFactorSecret}`,
       });
-      console.log(`email queue: ${Date.now() - t4}ms`);
     }
   } catch (e) {
     handleError(res, 500, "Server error");
@@ -184,31 +179,23 @@ export const forgotPassword = async (req: Request, res: Response) => {
     );
 
     // send email
-    const resetPasswordUrl = `${clientUrl}/reset-password/${email}/${user.emailVerificationToken}`;
+    const resetPasswordUrl = `${clientUrl}/reset-password/${email}/${token}`;
 
+    console.log('token', token);
+    console.log('resetPasswordUrl', resetPasswordUrl);
     res.status(200).json({
       message: "Verification Email sent",
     });
 
-    await sendEmailQueue.add({
-      to: email,
-      subject: "Reset Password",
-      html: `
-        <h2>Reset Password</h2>
-        <p>Click on the link below to reset your password</p>
-        <a href="${resetPasswordUrl}">Reset Password</a>
-      `,
-    });
-
-    // await sendEmail(
-    //   email,
-    //   "Reset Password",
-    //   `
-    // <h2>Reset Password</h2>
-    // <p>Click on the link below to reset your password</p>
-    // <a href="${resetPasswordUrl}">Reset Password</a>
-    // `,
-    // );
+    await sendEmail(
+      email,
+      "Reset Password",
+      `
+    <h2>Reset Password</h2>
+    <p>Click on the link below to reset your password</p>
+    <a href="${resetPasswordUrl}">Reset Password</a>
+    `,
+    );
   } catch (e) {
     handleError(res, 500, `Server error: ${e}`);
   }
@@ -328,6 +315,11 @@ export const loginWith2FA = async (req: Request, res: Response) => {
       return;
     }
 
+    if (user.isBlocked) {
+      handleError(res, 400, "You are already blocked. Contact Admin to login");
+      return;
+    }
+
     const token = generateToken(user);
 
     user.twoFactorSecret = null;
@@ -340,6 +332,7 @@ export const loginWith2FA = async (req: Request, res: Response) => {
         isVerified: user.isVerified,
         twoFactorEnabled: user.twoFactorEnabled,
         role: user.role,
+        isBlocked: user.isBlocked,
       },
     });
   } catch (e) {
