@@ -112,7 +112,6 @@ export const updateProfile = async (
 export const setUp2FA = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const loggedInUser = req.user;
-    const { email } = req.body;
 
     const user = await findUserByEmail(loggedInUser.email);
     if (!user) {
@@ -120,20 +119,17 @@ export const setUp2FA = async (req: AuthenticatedRequest, res: Response) => {
       return;
     }
 
-    if (!email) {
-      handleError(res, 400, `Missing required field: email`);
-      return;
-    }
     if (user.twoFactorEnabled) {
       handleError(res, 400, "2FA is already enabled");
       return;
     }
 
-    user.twoFactorSecret = generateOtp();
+    const otp = generateOtp();
+    user.twoFactorSecret = otp;
     await user.save();
 
     await sendEmail(
-      email,
+      loggedInUser.email,
       "Setup Two Factor Authentication",
       `
         <h2>Setup Two-Factor Authentication</h2>
@@ -144,9 +140,14 @@ export const setUp2FA = async (req: AuthenticatedRequest, res: Response) => {
 
     res.status(200).json({
       message: "2FA Triggered successfully",
+      success: true,
+      data: {
+        otp,
+      },
     });
   } catch (e) {
-    handleError(res, 500, "Server error");
+    console.log('error');
+    handleError(res, 500, `Server error: ${e}`);
   }
 };
 

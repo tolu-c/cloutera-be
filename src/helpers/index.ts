@@ -4,14 +4,20 @@ import User from "../models/user";
 import { handleError } from "../utils/errorHandler";
 
 export const findUserByEmail = (email: string) =>
-  User.findOne({ email: email.toLowerCase() })
-    .select("+password +twoFactorSecret")
-    .lean();
+  User.findOne({ email: email.toLowerCase() }).select(
+    "+password +twoFactorSecret",
+  );
 
 export const findUserWithToken = (email: string, token: string) =>
   User.findOne({
     email: email.toLowerCase(),
     emailVerificationToken: token,
+  }).select("+password");
+
+export const findUserWithOtp = (email: string, otp: string) =>
+  User.findOne({
+    email: email.toLowerCase(),
+    twoFactorSecret: otp,
   }).select("+password");
 
 export const findUserWithUsername = (username: string) =>

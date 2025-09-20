@@ -1,0 +1,15 @@
+meta {
+  name: setup-2fa
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{host}}/profile/setup-2fa
+  body: none
+  auth: inherit
+}
+
+settings {
+  encodeUrl: true
+}

@@ -13,6 +13,7 @@ import {
 } from "../utils";
 import {
   findUserByEmail,
+  findUserWithOtp,
   findUserWithToken,
   findUserWithUsername,
 } from "../helpers";
@@ -181,8 +182,8 @@ export const forgotPassword = async (req: Request, res: Response) => {
     // send email
     const resetPasswordUrl = `${clientUrl}/reset-password/${email}/${token}`;
 
-    console.log('token', token);
-    console.log('resetPasswordUrl', resetPasswordUrl);
+    console.log("token", token);
+    console.log("resetPasswordUrl", resetPasswordUrl);
     res.status(200).json({
       message: "Verification Email sent",
     });
@@ -334,6 +335,62 @@ export const loginWith2FA = async (req: Request, res: Response) => {
         role: user.role,
         isBlocked: user.isBlocked,
       },
+    });
+  } catch (e) {
+    handleError(res, 500, "Server error");
+  }
+};
+
+export const trigger2FA = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const authUser = req.user;
+    const user = await findUserByEmail(authUser?.email);
+
+    if (!user) {
+      handleError(res, 404, "User not found");
+      return;
+    }
+
+    const otp = generateOtp();
+    user.twoFactorSecret = otp;
+    await user.save();
+
+    res.status(200).json({
+      message: "2FA triggered successfully",
+      success: true,
+      data: {
+        otp,
+      },
+    });
+  } catch (e) {
+    handleError(res, 500, "Server error");
+  }
+};
+
+export const verify2fa = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { otp } = req.body;
+
+    const authUser = req.user;
+
+    if (!otp) {
+      handleError(res, 400, "OTP is missing");
+    }
+
+    const user = await findUserWithOtp(authUser?.email, otp);
+
+    if (!user) {
+      handleError(res, 404, "User not found");
+      return;
+    }
+
+    user.twoFactorEnabled = true;
+    user.twoFactorSecret = null;
+    await user.save();
+
+    res.status(200).json({
+      message: "2FA enabled successfully",
+      success: true,
     });
   } catch (e) {
     handleError(res, 500, "Server error");

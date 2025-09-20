@@ -1,0 +1,21 @@
+meta {
+  name: verify 2fa
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{host}}/profile/verify-2fa
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "secretCode":"975572"
+  }
+}
+
+settings {
+  encodeUrl: true
+}
