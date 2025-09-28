@@ -11,6 +11,7 @@ import {
   TransactionStatus,
   TransactionType,
 } from "../models/fundHistory";
+import { logUserActivity } from "../utils/activityLogger";
 
 export const getAccountStatus = async (
   req: AuthenticatedRequest,
@@ -180,6 +181,8 @@ export const addFund = async (req: AuthenticatedRequest, res: Response) => {
           await fundsHistory.save({ session });
         }
       });
+
+      await logUserActivity(user.userId, "added fund.");
 
       res.status(200).json({
         success: true,

@@ -1,0 +1,25 @@
+meta {
+  name: scheduleNotification
+  type: http
+  seq: 9
+}
+
+post {
+  url: {{host}}/notifications/add/schedule
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "title": "My first scheduled notification",
+    "message": "My first scheduled notification",
+    "type": "bar",
+    "date": "2025-09-29",
+    "time": "18:00"
+  }
+}
+
+settings {
+  encodeUrl: true
+}

@@ -1,0 +1,19 @@
+meta {
+  name: userActivities
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{host}}/activity/:id
+  body: none
+  auth: inherit
+}
+
+params:path {
+  id: 68c588b4e561181952c7f1d4
+}
+
+settings {
+  encodeUrl: true
+}

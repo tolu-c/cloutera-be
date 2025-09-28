@@ -1,0 +1,21 @@
+meta {
+  name: admin-scheduled
+  type: http
+  seq: 7
+}
+
+get {
+  url: {{host}}/notifications/scheduled
+  body: none
+  auth: inherit
+}
+
+params:query {
+  ~search: 
+  ~page: 2
+  ~limit: 
+}
+
+settings {
+  encodeUrl: true
+}

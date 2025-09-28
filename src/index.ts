@@ -14,7 +14,9 @@ import servicesRoutes from "./routes/servicesRoutes";
 import ordersRoutes from "./routes/ordersRoutes";
 import accountRoutes from "./routes/userAccount";
 import adminRoutes from "./routes/adminRoutes";
-import { servicesCronJob } from "./utils/cron";
+import notificationRoutes from "./routes/notificationRoutes";
+import activityRoutes from "./routes/activityRoutes";
+import { notificationCronJob, servicesCronJob } from "./utils/cron";
 
 dotenv.config();
 
@@ -110,12 +112,15 @@ app.use("/api/services", servicesRoutes);
 app.use("/api/orders", ordersRoutes);
 app.use("/api/account", accountRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/notifications", notificationRoutes);
+app.use("/api/activity", activityRoutes);
 
 mongoose
   .connect(mongoUri)
   .then(() => {
     console.log("Database connected ✅");
     servicesCronJob();
+    void notificationCronJob();
   })
   .catch((error) => {
     console.log(`An error occurred 💥: ${error}`);

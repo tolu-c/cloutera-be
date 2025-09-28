@@ -5,6 +5,7 @@ import User from "../models/user";
 import { findUserByEmail, findUserWithUsername } from "../helpers";
 import bcrypt from "bcrypt";
 import { generateOtp, sendEmail } from "../utils";
+import { logUserActivity } from "../utils/activityLogger";
 
 export const getUser = async (req: AuthenticatedRequest, res: Response) => {
   try {
@@ -65,6 +66,8 @@ export const changePassword = async (
     myUser.password = await bcrypt.hash(newPassword, 18);
     await myUser.save();
 
+    await logUserActivity(user.userId, "changed password.");
+
     res.status(200).json({
       message: "Password changed successfully",
     });
@@ -101,6 +104,9 @@ export const updateProfile = async (
     user.lastName = lastName.trim();
 
     await user.save();
+
+    await logUserActivity(loggedInUser.userId, "updated profile.");
+
     res.status(200).json({
       message: "Profile updated successfully",
     });
@@ -124,8 +130,7 @@ export const setUp2FA = async (req: AuthenticatedRequest, res: Response) => {
       return;
     }
 
-    const otp = generateOtp();
-    user.twoFactorSecret = otp;
+    user.twoFactorSecret = generateOtp();
     await user.save();
 
     await sendEmail(
@@ -138,15 +143,14 @@ export const setUp2FA = async (req: AuthenticatedRequest, res: Response) => {
         `,
     );
 
+    await logUserActivity(loggedInUser.userId, "triggered 2FA setup.");
+
     res.status(200).json({
       message: "2FA Triggered successfully",
       success: true,
-      data: {
-        otp,
-      },
     });
   } catch (e) {
-    console.log('error');
+    console.log("error");
     handleError(res, 500, `Server error: ${e}`);
   }
 };
@@ -184,6 +188,9 @@ export const verify2FA = async (req: AuthenticatedRequest, res: Response) => {
         <p>Your account has been set up with Two-Factor Authentication.</p>
         `,
     );
+
+    await logUserActivity(loggedInUser.userId, "setup 2FA successfully.");
+
     res.status(200).json({
       message: "2FA setup successfully",
     });

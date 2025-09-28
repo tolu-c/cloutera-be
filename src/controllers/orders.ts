@@ -6,6 +6,7 @@ import { Order } from "../models/orders";
 import { OrderStatus } from "../types/enums";
 import { PaginatedResponse } from "../types/service.types";
 import { deductBalance } from "./userAccount";
+import { logUserActivity } from "../utils/activityLogger";
 
 export const addOrder = async (req: AuthenticatedRequest, res: Response) => {
   try {
@@ -70,10 +71,11 @@ export const addOrder = async (req: AuthenticatedRequest, res: Response) => {
       remains: quantity,
       status: OrderStatus.PENDING,
     });
-
+    await order.populate("serviceId", "name type category rate");
     await order.save();
     // Populate service details for response
-    await order.populate("serviceId", "name type category rate");
+
+    await logUserActivity(user.userId, "placed an order.");
 
     res.status(201).json({
       success: true,

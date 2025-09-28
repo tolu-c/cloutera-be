@@ -1,0 +1,23 @@
+meta {
+  name: add
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{host}}/notifications/add
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "title": "My third notification",
+    "message":"My third notification",
+    "type":"bar"
+  }
+}
+
+settings {
+  encodeUrl: true
+}

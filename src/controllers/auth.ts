@@ -5,12 +5,7 @@ import bcrypt from "bcrypt";
 import { handleError } from "../utils/errorHandler";
 import User, { IUser } from "../models/user";
 import { UserRole } from "../types/enums";
-import {
-  generateEmailToken,
-  generateOtp,
-  sendEmail,
-  sendEmailQueue,
-} from "../utils";
+import { generateEmailToken, generateOtp, sendEmail } from "../utils";
 import {
   findUserByEmail,
   findUserWithOtp,
@@ -19,6 +14,7 @@ import {
 } from "../helpers";
 import { AuthenticatedRequest } from "../middleware";
 import { SALT_ROUNDS } from "../constants";
+import { logUserActivity } from "../utils/activityLogger";
 
 const generateToken = (user: IUser): string => {
   return jwt.sign(
@@ -118,10 +114,12 @@ export const loginUser = async (req: Request, res: Response) => {
       handleError(res, 400, "Invalid credentials");
       return;
     }
+
     if (!user.isVerified) {
       handleError(res, 400, "Please verify your email");
       return;
     }
+
     const isPasswordValid = await bcrypt.compare(password, user.password);
 
     if (!isPasswordValid) {
@@ -135,6 +133,8 @@ export const loginUser = async (req: Request, res: Response) => {
     }
 
     const token = generateToken(user);
+
+    await logUserActivity((user._id as string).toString(), "logged in.");
 
     res.status(200).json({
       message: "User successfully logged in",
@@ -151,14 +151,10 @@ export const loginUser = async (req: Request, res: Response) => {
       const twoFactorSecret = generateOtp();
       await User.updateOne({ _id: user._id }, { twoFactorSecret });
 
-      await sendEmailQueue.add({
-        to: email,
-        subject: "2FA code",
-        html: `Your 2FA code: ${twoFactorSecret}`,
-      });
+      await sendEmail(email, "2FA Code", `Your 2FA code: ${twoFactorSecret}`);
     }
   } catch (e) {
-    handleError(res, 500, "Server error");
+    handleError(res, 500, `Server error: ${e}`);
   }
 };
 
@@ -351,16 +347,12 @@ export const trigger2FA = async (req: AuthenticatedRequest, res: Response) => {
       return;
     }
 
-    const otp = generateOtp();
-    user.twoFactorSecret = otp;
+    user.twoFactorSecret = generateOtp();
     await user.save();
 
     res.status(200).json({
       message: "2FA triggered successfully",
       success: true,
-      data: {
-        otp,
-      },
     });
   } catch (e) {
     handleError(res, 500, "Server error");

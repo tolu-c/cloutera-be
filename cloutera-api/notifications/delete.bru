@@ -1,0 +1,19 @@
+meta {
+  name: delete
+  type: http
+  seq: 5
+}
+
+delete {
+  url: {{host}}/notifications/:id
+  body: none
+  auth: inherit
+}
+
+params:path {
+  id: 68d912be2b4d833571cc0e72
+}
+
+settings {
+  encodeUrl: true
+}

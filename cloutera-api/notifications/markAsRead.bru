@@ -1,0 +1,19 @@
+meta {
+  name: markAsRead
+  type: http
+  seq: 4
+}
+
+patch {
+  url: {{host}}/notifications/:id
+  body: none
+  auth: inherit
+}
+
+params:path {
+  id: 68d901cc50bd7861db21072d
+}
+
+settings {
+  encodeUrl: true
+}
