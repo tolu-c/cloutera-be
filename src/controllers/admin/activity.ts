@@ -71,50 +71,15 @@ export async function adminGetUserActivities(
   res: Response,
 ) {
   try {
-    const { page = 1, limit = 50, search } = req.query;
-    const query: any = {};
+    const activities = await Activity.find()
+      .sort({ createdAt: -1 })
+      .select("-__v");
 
-    if (search) {
-      const searchQuery = search.toString().trim();
-      const searchRegex = { $regex: searchQuery, $options: "i" };
-      query.$or = [{ action: searchRegex }];
-    }
-
-    const { pageNum, skipNum, limitNum } = createPaginationQuery(
-      Number(page),
-      Number(limit),
-    );
-
-    const [activities, total] = await Promise.all([
-      Activity.find(query)
-        .sort({ createdAt: -1 })
-        .skip(skipNum)
-        .limit(limitNum),
-      Activity.countDocuments(query),
-    ]);
-
-    const totalPages = Math.ceil(total / limitNum);
-
-    const response: PaginatedResponse<(typeof activities)[0]> = {
-      message: "user activities fetched",
+    res.status(200).json({
       success: true,
+      message: "user activities fetched",
       data: activities,
-      pagination: {
-        current: pageNum,
-        pages: totalPages,
-        total,
-        limit: limitNum,
-        hasNext: pageNum < totalPages,
-        hasPrev: pageNum > 1,
-      },
-      filters: {
-        search,
-        page,
-        limit,
-      },
-    };
-
-    res.status(200).json(response);
+    });
   } catch (e) {
     handleError(res, 500, `Server error: ${e}`);
   }
