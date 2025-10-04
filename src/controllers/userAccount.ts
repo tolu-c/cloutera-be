@@ -227,6 +227,26 @@ export const deductBalance = async (
   }
 };
 
+export async function refundBalance(
+  userId: string,
+  amount: number,
+): Promise<boolean> {
+  try {
+    const userAccount = await UserAccount.findOne({ userId });
+
+    if (!userAccount) {
+      return false;
+    }
+
+    userAccount.balance += amount;
+    await userAccount.save();
+
+    return true;
+  } catch (error) {
+    return false;
+  }
+}
+
 export const getFundsHistory = async (
   req: AuthenticatedRequest,
   res: Response,

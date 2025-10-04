@@ -3,6 +3,8 @@ import { ExternalServiceResponse } from "../types/service.types";
 import { Service } from "../models/service";
 import { getPeakerApiKey, API_URL } from "../constants";
 
+// const baseUrl = `${API_URL}?key=${getPeakerApiKey()}`;
+
 export const fetchAndSaveServices = async () => {
   try {
     const response: AxiosResponse<ExternalServiceResponse[]> = await axios.get(
@@ -46,3 +48,27 @@ export const fetchAndSaveServices = async () => {
     );
   }
 };
+
+export async function placePeakerOrder({
+  serviceId,
+  link,
+  quantity,
+}: {
+  serviceId: string;
+  link: string;
+  quantity: number;
+}) {
+  try {
+    const res: AxiosResponse<{ order: number; error?: string }> =
+      await axios.post(
+        `${API_URL}?key=${getPeakerApiKey()}&action=add&service=${serviceId}&link=${link}&quantity=${quantity}`,
+      );
+
+    return res.data;
+  } catch (error) {
+    console.error("Error placing order", error);
+    throw new Error(
+      `Failed to place order: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
+  }
+}

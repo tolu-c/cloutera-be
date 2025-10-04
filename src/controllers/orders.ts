@@ -5,8 +5,9 @@ import { Service } from "../models/service";
 import { Order } from "../models/orders";
 import { OrderStatus } from "../types/enums";
 import { PaginatedResponse } from "../types/service.types";
-import { deductBalance } from "./userAccount";
+import { deductBalance, refundBalance } from "./userAccount";
 import { logUserActivity } from "../utils/activityLogger";
+import { placePeakerOrder } from "../services/peaker";
 
 export const addOrder = async (req: AuthenticatedRequest, res: Response) => {
   try {
@@ -61,8 +62,22 @@ export const addOrder = async (req: AuthenticatedRequest, res: Response) => {
       return;
     }
 
+    const peakerOrderRes = await placePeakerOrder({
+      serviceId: serviceId,
+      link,
+      quantity,
+    });
+
+    if (peakerOrderRes.error) {
+      await refundBalance(user.userId, charge);
+
+      handleError(res, 400, "Failed to place order");
+      return;
+    }
+
     // Create order
     const order = new Order({
+      orderId: peakerOrderRes.order,
       userId: user.userId,
       serviceId: service._id,
       link,
