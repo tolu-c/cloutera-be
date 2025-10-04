@@ -53,12 +53,12 @@ orderSchema.index({ userId: 1, createdAt: -1 });
 // orderSchema.index({ orderId: 1 });
 
 // // Auto-increment orderId
-// orderSchema.pre("save", async function(next) {
-//   if (this.isNew) {
-//     const lastOrder = await Order.findOne().sort({ orderId: -1 });
-//     this.orderId = lastOrder ? lastOrder.orderId + 1 : 1;
-//   }
-//   next();
-// });
+orderSchema.pre("save", async function(next) {
+  if (this.isNew) {
+    const lastOrder = await Order.findOne().sort({ orderId: -1 });
+    this.orderId = lastOrder ? lastOrder.orderId + 1 : 1;
+  }
+  next();
+});
 
 export const Order = mongoose.model<IOrder>("Order", orderSchema);
