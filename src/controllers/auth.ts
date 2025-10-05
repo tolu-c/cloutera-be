@@ -16,7 +16,7 @@ import { AuthenticatedRequest } from "../middleware";
 import { SALT_ROUNDS } from "../constants";
 import { logUserActivity } from "../utils/activityLogger";
 
-const generateToken = (user: IUser): string => {
+export const generateToken = (user: IUser): string => {
   return jwt.sign(
     { email: user.email, userId: user._id, role: user.role },
     process.env.JWT_SECRET as string,
@@ -109,18 +109,22 @@ export const loginUser = async (req: Request, res: Response) => {
     const user = await findUserByEmail(email).select(
       "+password +twoFactorEnabled +twoFactorSecret +isVerified +role",
     );
+    const userPassword = user?.password;
 
     if (!user) {
       handleError(res, 400, "Invalid credentials");
       return;
     }
-
+    if (!userPassword) {
+      handleError(res, 400, "Account does not match. Login with Google");
+      return
+    }
     if (!user.isVerified) {
       handleError(res, 400, "Please verify your email");
       return;
     }
 
-    const isPasswordValid = await bcrypt.compare(password, user.password);
+    const isPasswordValid = await bcrypt.compare(password, userPassword);
 
     if (!isPasswordValid) {
       handleError(res, 400, "Invalid credentials");
@@ -289,6 +293,10 @@ export const loginWith2FA = async (req: Request, res: Response) => {
     if (!user) {
       handleError(res, 400, "Invalid credentials");
       return;
+    }
+    if (!user.password) {
+      handleError(res, 400, "Account does not match. Login with Google");
+      return
     }
     if (!user.isVerified) {
       handleError(res, 400, "Please verify your email");

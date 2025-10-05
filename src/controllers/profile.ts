@@ -43,11 +43,16 @@ export const changePassword = async (
     const { oldPassword, newPassword } = req.body;
 
     const myUser = await findUserByEmail(user.email);
+    const userPassword = myUser?.password
+
     if (!myUser) {
       handleError(res, 404, "User not found");
       return;
     }
-
+    if (!userPassword) {
+      handleError(res, 400, "Account does not match. Login with Google");
+      return
+    }
     if (!oldPassword || !newPassword) {
       handleError(
         res,
@@ -57,7 +62,7 @@ export const changePassword = async (
       return;
     }
 
-    const isPasswordValid = await bcrypt.compare(oldPassword, myUser.password);
+    const isPasswordValid = await bcrypt.compare(oldPassword, userPassword);
     if (!isPasswordValid) {
       handleError(res, 400, "Current password is incorrect");
       return;

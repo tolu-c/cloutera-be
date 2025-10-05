@@ -17,11 +17,15 @@ import adminRoutes from "./routes/adminRoutes";
 import notificationRoutes from "./routes/notificationRoutes";
 import activityRoutes from "./routes/activityRoutes";
 import { notificationCronJob, servicesCronJob } from "./utils/cron";
+import User, { IUser } from "./models/user";
+import { UserRole, UserStatus } from "./types/enums";
+import { generateToken } from "./controllers/auth";
+import { logUserActivity } from "./utils/activityLogger";
 
 dotenv.config();
 
-interface User {
-  id: string;
+interface PassportUser {
+  _id: string;
   name: string;
   email: string;
   photo: string;
@@ -29,6 +33,7 @@ interface User {
 
 const port = process.env.PORT || 4000;
 const mongoUri = process.env.MONGO_URI as string;
+const clientUrl = process.env.CLIENT_URL as string;
 
 const app = express();
 
@@ -60,33 +65,65 @@ passport.use(
       profile: any,
       done: any,
     ) => {
-      const user: User = {
-        id: profile.id,
-        name: profile.displayName,
-        email: profile.emails[0].value,
-        photo: profile.photos[0].value,
-      };
-      return done(null, user);
+      try {
+        const passportUser: PassportUser = {
+          _id: profile.id,
+          name: profile.displayName,
+          email: profile.emails[0].value,
+          photo: profile.photos[0].value,
+        };
+        const { _id, email, name, photo } = passportUser;
+
+        let user = await User.findOne({ googleId: _id });
+
+        if (!user) {
+          user = await User.findOne({ email });
+
+          if (user) {
+            user.googleId = _id;
+            user.photo = photo;
+            user.provider = "google";
+            await user.save();
+          } else {
+            const names = name.split(" ");
+            const firstName = names[0];
+            const lastName = names.slice(1).join(" ");
+            const username = name.replace(/\s/g, "").toLowerCase();
+
+            user = new User({
+              googleId: profile.id,
+              firstName,
+              lastName,
+              username,
+              email,
+              photo,
+              isVerified: true,
+              role: UserRole.Customer,
+              status: UserStatus.Active,
+              provider: "google",
+            });
+            await user.save();
+          }
+        }
+        return done(null, user);
+      } catch (err) {
+        return done(err);
+      }
     },
   ),
 );
 
-// passport.serializeUser(function(user: User, cb) {
-//   process.nextTick(function() {
-//     cb(null, { id: user.id, username: user.name, name: user.name });
-//   });
-// });
+passport.serializeUser((user: any, done) => {
+  done(null, user._id);
+});
 
-// passport.serializeUser((user: User, done) => {
-//   done(null, user);
-// });
-
-// passport.serializeUser((user: User, done) => {
-//   done(null, user);
-// });
-
-passport.deserializeUser((user: User, done) => {
-  done(null, user);
+passport.deserializeUser(async (id: string, done) => {
+  try {
+    const user = await User.findById(id);
+    done(null, user);
+  } catch (err) {
+    done(err);
+  }
 });
 
 app.use(express.json());
@@ -100,10 +137,19 @@ app.get(
 app.get(
   "/auth/google/callback",
   passport.authenticate("google", { failureRedirect: "/login" }),
-  (req: Request, res: Response) => {
-    res.redirect("http://localhost:3000/dashboard");
+  async (req: Request, res: Response) => {
+    const user = req?.user as IUser;
+
+    const token = generateToken(user);
+
+    await logUserActivity((user._id as string).toString(), "logged in.");
+    res.redirect(`${clientUrl}/login?token=${token}`);
   },
 );
+
+app.get("/api/auth/user", (req: Request, res: Response) => {
+  res.json(req.user || null);
+});
 
 app.use("/api/auth", authRoutes);
 app.use("/api/profile", profileRoutes);
