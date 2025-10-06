@@ -5,6 +5,7 @@ export interface IUserAccount extends Document {
   userId: mongoose.Types.ObjectId;
   balance: number;
   totalSpent: number;
+  totalOrders: number;
   accountLevel: AccountLevel;
   createdAt: Date;
   updatedAt: Date;
@@ -30,6 +31,11 @@ const userAccountSchema = new Schema<IUserAccount>(
       default: 0,
       min: 0,
     },
+    totalOrders: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
     accountLevel: {
       type: Number,
       enum: Object.values(AccountLevel),
@@ -42,14 +48,18 @@ const userAccountSchema = new Schema<IUserAccount>(
 );
 
 // Method to calculate account level based on total spent
-userAccountSchema.methods.calculateAccountLevel = function(): AccountLevel {
-  if (this.totalSpent >= 100000) return AccountLevel.LEVEL_3; // ₦100,000+
-  if (this.totalSpent >= 25000) return AccountLevel.LEVEL_2; // ₦25,000+
-  return AccountLevel.LEVEL_1; // Below ₦25,000
+userAccountSchema.methods.calculateAccountLevel = function (): AccountLevel {
+  if (this.totalOrders > 100) return AccountLevel.LEVEL_5;
+  if (this.totalOrders >= 99) return AccountLevel.LEVEL_4;
+  if (this.totalOrders >= 49) return AccountLevel.LEVEL_3;
+  if (this.totalOrders >= 19) return AccountLevel.LEVEL_2;
+  if (this.totalOrders >= 4) return AccountLevel.LEVEL_1;
+
+  return AccountLevel.LEVEL_1;
 };
 
 // Pre-save hook to update account level
-userAccountSchema.pre("save", function(next) {
+userAccountSchema.pre("save", function (next) {
   this.accountLevel = this.calculateAccountLevel();
   next();
 });

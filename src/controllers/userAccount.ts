@@ -33,6 +33,7 @@ export const getAccountStatus = async (
         userId: user.userId,
         balance: 0,
         totalSpent: 0,
+        totalOrders: 0,
       });
       await userAccount.save();
     }
@@ -62,6 +63,11 @@ export const getAccountStatus = async (
     // Update totalSpent if needed
     if (userAccount.totalSpent !== successfulOrders.totalAmount) {
       userAccount.totalSpent = successfulOrders.totalAmount;
+      await userAccount.save();
+    }
+
+    if (userAccount.totalOrders !== totalOrders) {
+      userAccount.totalOrders = totalOrders;
       await userAccount.save();
     }
 
