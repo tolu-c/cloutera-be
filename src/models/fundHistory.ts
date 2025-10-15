@@ -14,6 +14,7 @@ export enum TransactionStatus {
 export enum PaymentMethod {
   FLUTTERWAVE = "FlutterWave",
   BANK_TRANSFER = "Bank Transfer",
+  PAYSTACK = "PayStack",
   SYSTEM = "System",
 }
 
@@ -88,7 +89,7 @@ const fundsHistorySchema = new Schema<IFundsHistory>(
 );
 
 // Auto-increment transactionId
-fundsHistorySchema.pre("save", async function(next) {
+fundsHistorySchema.pre("save", async function (next) {
   if (this.isNew) {
     const lastTransaction = await FundsHistory.findOne().sort({
       transactionId: -1,

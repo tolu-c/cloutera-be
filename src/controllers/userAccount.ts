@@ -12,6 +12,63 @@ import {
   TransactionType,
 } from "../models/fundHistory";
 import { logUserActivity } from "../utils/activityLogger";
+import { initializePayment, verifyPayment } from "../services/paystack";
+
+export async function verifyUserPayment(
+  req: AuthenticatedRequest,
+  res: Response,
+) {
+  try {
+    const { reference } = req.params;
+
+    if (!reference) {
+      handleError(res, 400, "Reference is required");
+      return;
+    }
+
+    const response = await verifyPayment(reference);
+
+    res.status(200).json({
+      success: true,
+      message: response.message,
+      data: response.data,
+    });
+  } catch (error) {
+    handleError(
+      res,
+      500,
+      `${error instanceof Error ? error.message : "Error adding funds"}`,
+    );
+  }
+}
+
+export async function initializeUserPayment(
+  req: AuthenticatedRequest,
+  res: Response,
+) {
+  try {
+    const { email, amount } = req.body;
+
+    if (!email || !amount) {
+      handleError(res, 400, "Email and amount are required");
+      return;
+    }
+
+    const response = await initializePayment(email, amount);
+
+    res.status(200).json({
+      data: response.data,
+      success: true,
+      message: response.message,
+    });
+  } catch (error) {
+    handleError(
+      res,
+      500,
+      `${error instanceof Error ? error.message : "Error adding funds"}`,
+    );
+  }
+}
 
 export const getAccountStatus = async (
   req: AuthenticatedRequest,
@@ -116,7 +173,7 @@ export const addFund = async (req: AuthenticatedRequest, res: Response) => {
       return;
     }
 
-    if (status !== "successful") {
+    if (status !== "success") {
       handleError(res, 400, "Payment was not successful");
       return;
     }

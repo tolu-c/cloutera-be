@@ -1,0 +1,22 @@
+meta {
+  name: initialize-payment
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{host}}/account/initialize-payment
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "email":"webdevtolu+cleanup@protonmail.com",
+    "amount": 500
+  }
+}
+
+settings {
+  encodeUrl: true
+}
