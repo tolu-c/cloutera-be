@@ -135,15 +135,11 @@ export interface VerifyPaymentResponse {
   };
 }
 
-const PayStackPaymentStatus = [
-  "success",
-  "abandoned",
-  "ongoing",
-  "pending",
-  "processing",
-  "queued",
-  "reversed",
-] as const;
-
-type PayStackPaymentStatus = typeof PayStackPaymentStatus[number];
-
+export type PayStackPaymentStatus =
+  | "success"
+  | "abandoned"
+  | "ongoing"
+  | "pending"
+  | "processing"
+  | "queued"
+  | "reversed";
