@@ -17,6 +17,7 @@ import adminRoutes from "./routes/adminRoutes";
 import notificationRoutes from "./routes/notificationRoutes";
 import activityRoutes from "./routes/activityRoutes";
 import { notificationCronJob, servicesCronJob } from "./utils/cron";
+import { startOrderStatusCron } from "./jobs/orderStatusCron";
 import User, { IUser } from "./models/user";
 import { UserRole, UserStatus } from "./types/enums";
 import { generateToken } from "./controllers/auth";
@@ -167,6 +168,7 @@ mongoose
     console.log("Database connected ✅");
     servicesCronJob();
     void notificationCronJob();
+    void startOrderStatusCron();
   })
   .catch((error) => {
     console.log(`An error occurred 💥: ${error}`);

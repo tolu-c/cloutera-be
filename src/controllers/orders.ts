@@ -8,6 +8,7 @@ import { PaginatedResponse } from "../types/service.types";
 import { deductBalance, refundBalance } from "./userAccount";
 import { logUserActivity } from "../utils/activityLogger";
 import { placePeakerOrder } from "../services/peaker";
+import { addOrderToMonitor } from "../services/orderStatusMonitor";
 
 export const addOrder = async (req: AuthenticatedRequest, res: Response) => {
   try {
@@ -75,6 +76,7 @@ export const addOrder = async (req: AuthenticatedRequest, res: Response) => {
       return;
     }
 
+    console.log('peaker order id', peakerOrderRes.order);
     // Create order
     const order = new Order({
       orderId: peakerOrderRes.order,
@@ -89,6 +91,9 @@ export const addOrder = async (req: AuthenticatedRequest, res: Response) => {
     await order.populate("serviceId", "name type category rate");
     await order.save();
     // Populate service details for response
+
+    // Add order to monitoring system
+    addOrderToMonitor(peakerOrderRes.order);
 
     await logUserActivity(user.userId, "placed an order.");
 

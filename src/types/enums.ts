@@ -19,6 +19,8 @@ export enum OrderStatus {
   COMPLETED = "Completed",
   CANCELLED = "Cancelled",
   REFUNDED = "Refunded",
+  Partial = "Partial",
+  Processing = "Processing",
 }
 
 export enum AccountLevel {
