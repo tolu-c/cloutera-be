@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2FA Success Email</title>
+    <link rel="stylesheet" href="./output.css">
+</head>
+  <body class="font-mont container mx-auto max-w-md">
+    <!-- header -->
+    <img
+      src="./cloutera-header.png"
+      alt="cloutera"
+      class="h-30 w-full object-center object-cover"
+    />
+
+    <!-- body -->
+    <div class="flex flex-col w-full py-8 px-4 gap-4">
+      <div class="flex flex-col gap-2">
+        <p class="text-slate-800 text-sm/5 font-bold">Hi {{userName}}</p>
+        <p class="text-slate-800 text-sm/5">
+          You have successfully enabled
+          <span class="font-medium">2FA Setup on your account.</span>
+        </p>
+      </div>
+
+      <p class="text-xs/[18px] text-slate-800">
+        Thank you for choosing Cloutera Hub!
+      </p>
+    </div>
+
+    <!-- footer -->
+    <footer class="px-4">
+      <p id="footerText" class="text-[8px] leading-3.5 text-slate-500"></p>
+    </footer>
+
+    <script>
+      const currentYear = new Date().getFullYear();
+      const footerText = document.getElementById("footerText");
+
+      footerText.innerText = `© ${currentYear} Cloutera Hub. All rights reserved.`;
+    </script>
+  </body>
+</html>

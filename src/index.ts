@@ -16,7 +16,7 @@ import accountRoutes from "./routes/userAccount";
 import adminRoutes from "./routes/adminRoutes";
 import notificationRoutes from "./routes/notificationRoutes";
 import activityRoutes from "./routes/activityRoutes";
-import { notificationCronJob, servicesCronJob } from "./utils/cron";
+import { notificationCronJob, servicesCronJob, checkPeakerBalanceCronJob } from "./utils/cron";
 import { startOrderStatusCron } from "./jobs/orderStatusCron";
 import User, { IUser } from "./models/user";
 import { UserRole, UserStatus } from "./types/enums";
@@ -169,6 +169,7 @@ mongoose
     servicesCronJob();
     void notificationCronJob();
     void startOrderStatusCron();
+    void checkPeakerBalanceCronJob();
   })
   .catch((error) => {
     console.log(`An error occurred 💥: ${error}`);

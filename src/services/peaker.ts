@@ -2,7 +2,11 @@ import axios, { AxiosResponse } from "axios";
 import { ExternalServiceResponse } from "../types/service.types";
 import { Service } from "../models/service";
 import { getPeakerApiKey, API_URL } from "../constants";
-import { PeakerOrderStatus } from "../types/order.types";
+import {
+  MultipleOrderStatus,
+  PeakerBalance,
+  PeakerOrderStatus,
+} from "../types/order.types";
 
 export const fetchAndSaveServices = async () => {
   try {
@@ -76,6 +80,35 @@ export async function getPeakerOrderStatus(orderId: number) {
   try {
     const res: AxiosResponse<PeakerOrderStatus> = await axios.get(
       `${API_URL}?key=${getPeakerApiKey()}&action=status&order=${orderId}`,
+    );
+    return res.data;
+  } catch (error) {
+    console.error("Error getting order status", error);
+    throw new Error(
+      `Failed to get order status: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
+  }
+}
+
+export async function getPeakerBulkOrders(orders: number[]) {
+  try {
+    const ordersString = orders.join(",");
+    const res: AxiosResponse<MultipleOrderStatus> = await axios.get(
+      `${API_URL}?key=${getPeakerApiKey()}&action=status&orders=${ordersString}`,
+    );
+    return res.data;
+  } catch (error) {
+    console.error("Error getting order status", error);
+    throw new Error(
+      `Failed to get order status: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
+  }
+}
+
+export async function getPeakerBalance() {
+  try {
+    const res: AxiosResponse<PeakerBalance> = await axios.get(
+      `${API_URL}?key=${getPeakerApiKey()}&action=balance`,
     );
     return res.data;
   } catch (error) {

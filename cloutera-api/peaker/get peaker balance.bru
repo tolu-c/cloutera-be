@@ -1,0 +1,21 @@
+meta {
+  name: get peaker balance
+  type: http
+  seq: 2
+}
+
+get {
+  url: https://peakerr.com/api/v2?key={{peakerKey}}&action=balance
+  body: none
+  auth: inherit
+}
+
+params:query {
+  key: {{peakerKey}}
+  action: balance
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

@@ -5,7 +5,12 @@ import bcrypt from "bcrypt";
 import { handleError } from "../utils/errorHandler";
 import User, { IUser } from "../models/user";
 import { UserRole } from "../types/enums";
-import { generateEmailToken, generateOtp, sendEmail } from "../utils";
+import {
+  generateEmailToken,
+  generateOtp,
+  sendEmail,
+  sendEmailWithResend,
+} from "../utils";
 import {
   findUserByEmail,
   findUserWithOtp,
@@ -57,14 +62,14 @@ export const signUpUser = async (req: Request, res: Response) => {
 
     const verifyAccountUrl = `${clientUrl}/verify-account/${email}/${user.emailVerificationToken}`;
 
-    await sendEmail(
+    await sendEmailWithResend(
       user.email,
       "Welcome to Cloutera",
-      `
-<h2>Welcome to Cloutera, Verify your Account</h2>
-        <p>Click on the link below to verify your email</p>
-        <a href="${verifyAccountUrl}">Verify your account</a>
-    `,
+      "welcome-email",
+      {
+        userName: user.firstName || user.username || "User",
+        verifyUrl: verifyAccountUrl,
+      },
     );
 
     res.status(201).json({
@@ -117,7 +122,7 @@ export const loginUser = async (req: Request, res: Response) => {
     }
     if (!userPassword) {
       handleError(res, 400, "Account does not match. Login with Google");
-      return
+      return;
     }
     if (!user.isVerified) {
       handleError(res, 400, "Please verify your email");
@@ -155,7 +160,10 @@ export const loginUser = async (req: Request, res: Response) => {
       const twoFactorSecret = generateOtp();
       await User.updateOne({ _id: user._id }, { twoFactorSecret });
 
-      await sendEmail(email, "2FA Code", `Your 2FA code: ${twoFactorSecret}`);
+      await sendEmailWithResend(email, "2FA Code", "2fa-code-email", {
+        userName: user.firstName || user.username || "User",
+        code: twoFactorSecret,
+      });
     }
   } catch (e) {
     handleError(res, 500, `Server error: ${e}`);
@@ -188,15 +196,10 @@ export const forgotPassword = async (req: Request, res: Response) => {
       message: "Verification Email sent",
     });
 
-    await sendEmail(
-      email,
-      "Reset Password",
-      `
-    <h2>Reset Password</h2>
-    <p>Click on the link below to reset your password</p>
-    <a href="${resetPasswordUrl}">Reset Password</a>
-    `,
-    );
+    await sendEmailWithResend(email, "Reset Password", "reset-password", {
+      userName: user.firstName || user.username || "User",
+      resetUrl: resetPasswordUrl,
+    });
   } catch (e) {
     handleError(res, 500, `Server error: ${e}`);
   }
@@ -253,6 +256,7 @@ export const resendVerificationEmail = async (req: Request, res: Response) => {
     user.emailVerificationToken = generateEmailToken();
     // set expiry
     await user.save();
+    // TODO: send email
 
     res.status(200).json({
       message: "Verification email sent",
@@ -296,7 +300,7 @@ export const loginWith2FA = async (req: Request, res: Response) => {
     }
     if (!user.password) {
       handleError(res, 400, "Account does not match. Login with Google");
-      return
+      return;
     }
     if (!user.isVerified) {
       handleError(res, 400, "Please verify your email");

@@ -1,6 +1,7 @@
 import { Order } from "../models/orders";
 import { OrderStatus } from "../types/enums";
-import { getPeakerOrderStatus } from "./peaker";
+import { getPeakerBulkOrders } from "./peaker";
+import { PeakerOrderStatus } from "../types/order.types";
 
 // In-memory state to track pending orders
 let pendingOrders: Set<number> = new Set();
@@ -49,8 +50,26 @@ export function getPendingOrders(): number[] {
 }
 
 /**
+ * Helper function to check if a response is an error
+ */
+function isPeakerError(response: any): response is { error: string } {
+  return "error" in response;
+}
+
+/**
+ * Helper function to batch array into chunks
+ */
+function chunkArray<T>(array: T[], chunkSize: number): T[][] {
+  const chunks: T[][] = [];
+  for (let i = 0; i < array.length; i += chunkSize) {
+    chunks.push(array.slice(i, i + chunkSize));
+  }
+  return chunks;
+}
+
+/**
  * Monitor and update order statuses
- * This function checks all pending orders and updates their status
+ * This function checks all pending orders and updates their status using bulk API
  */
 export async function monitorOrderStatuses() {
   try {
@@ -68,51 +87,85 @@ export async function monitorOrderStatuses() {
       `[${new Date().toISOString()}] Monitoring ${orders.length} pending orders`,
     );
 
+    if (orders.length === 0) {
+      console.log("No pending orders to monitor");
+      return;
+    }
+
     let updatedCount = 0;
     let completedCount = 0;
     let errorCount = 0;
 
-    // Process each order
-    for (const order of orders) {
+    // Extract order IDs
+    const orderIds = orders.map((order) => order.orderId);
+
+    // Batch orders into groups of 100 (max supported by API)
+    const batches = chunkArray(orderIds, 100);
+
+    console.log(`Processing ${batches.length} batch(es) of orders`);
+
+    // Process each batch
+    for (const batch of batches) {
       try {
-        // Fetch status from Peaker API
-        const peakerStatus = await getPeakerOrderStatus(order.orderId);
+        // Fetch bulk status from Peaker API
+        const bulkStatuses = await getPeakerBulkOrders(batch);
 
-        // Check if status has changed
-        if (peakerStatus.status !== order.status) {
-          // Update order in database
-          await Order.findOneAndUpdate(
-            { orderId: order.orderId },
-            {
-              status: peakerStatus.status,
-              startCount: parseInt(peakerStatus.start_count) || 0,
-              remains: parseInt(peakerStatus.remains) || 0,
-            },
-          );
+        // Process each order in the response
+        for (const [orderIdStr, peakerStatus] of Object.entries(bulkStatuses)) {
+          const orderId = parseInt(orderIdStr);
 
-          updatedCount++;
-
-          // If order is completed or cancelled, remove from monitoring
-          if (
-            peakerStatus.status === OrderStatus.COMPLETED ||
-            peakerStatus.status === OrderStatus.CANCELLED ||
-            peakerStatus.status === OrderStatus.REFUNDED
-          ) {
-            removeOrderFromMonitor(order.orderId);
-            completedCount++;
-            console.log(
-              `Order ${order.orderId} ${peakerStatus.status.toLowerCase()}`,
+          // Check if response is an error
+          if (isPeakerError(peakerStatus)) {
+            errorCount++;
+            console.error(
+              `Error for order ${orderId}: ${peakerStatus.error}`,
             );
-          } else {
-            console.log(
-              `Order ${order.orderId} status updated to ${peakerStatus.status}`,
+            continue;
+          }
+
+          // Find the order in our database list
+          const order = orders.find((o) => o.orderId === orderId);
+          if (!order) {
+            console.warn(`Order ${orderId} not found in database list`);
+            continue;
+          }
+
+          // Check if status has changed
+          if (peakerStatus.status !== order.status) {
+            // Update order in database
+            await Order.findOneAndUpdate(
+              { orderId },
+              {
+                status: peakerStatus.status,
+                startCount: parseInt(peakerStatus.start_count) || 0,
+                remains: parseInt(peakerStatus.remains) || 0,
+              },
             );
+
+            updatedCount++;
+
+            // If order is completed or cancelled, remove from monitoring
+            if (
+              peakerStatus.status === OrderStatus.COMPLETED ||
+              peakerStatus.status === OrderStatus.CANCELLED ||
+              peakerStatus.status === OrderStatus.REFUNDED
+            ) {
+              removeOrderFromMonitor(orderId);
+              completedCount++;
+              console.log(
+                `Order ${orderId} ${peakerStatus.status.toLowerCase()}`,
+              );
+            } else {
+              console.log(
+                `Order ${orderId} status updated to ${peakerStatus.status}`,
+              );
+            }
           }
         }
       } catch (error) {
         errorCount++;
-        console.error(`Error checking status for order ${order.orderId}:`, error);
-        // Continue processing other orders even if one fails
+        console.error(`Error processing batch:`, error);
+        // Continue processing other batches even if one fails
       }
     }
 

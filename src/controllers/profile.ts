@@ -4,7 +4,7 @@ import { AuthenticatedRequest } from "../middleware";
 import User from "../models/user";
 import { findUserByEmail, findUserWithUsername } from "../helpers";
 import bcrypt from "bcrypt";
-import { generateOtp, sendEmail } from "../utils";
+import { generateOtp, sendEmail, sendEmailWithResend } from "../utils";
 import { logUserActivity } from "../utils/activityLogger";
 
 export const getUser = async (req: AuthenticatedRequest, res: Response) => {
@@ -43,7 +43,7 @@ export const changePassword = async (
     const { oldPassword, newPassword } = req.body;
 
     const myUser = await findUserByEmail(user.email);
-    const userPassword = myUser?.password
+    const userPassword = myUser?.password;
 
     if (!myUser) {
       handleError(res, 404, "User not found");
@@ -51,7 +51,7 @@ export const changePassword = async (
     }
     if (!userPassword) {
       handleError(res, 400, "Account does not match. Login with Google");
-      return
+      return;
     }
     if (!oldPassword || !newPassword) {
       handleError(
@@ -138,14 +138,14 @@ export const setUp2FA = async (req: AuthenticatedRequest, res: Response) => {
     user.twoFactorSecret = generateOtp();
     await user.save();
 
-    await sendEmail(
+    await sendEmailWithResend(
       loggedInUser.email,
       "Setup Two Factor Authentication",
-      `
-        <h2>Setup Two-Factor Authentication</h2>
-        <p>Enter the code below to set up Two-Factor Authentication on your account.</p>
-        <p>Your code is ${user.twoFactorSecret}</p>
-        `,
+      "2fa-code-email",
+      {
+        userName: user.firstName || user.username || "User",
+        code: user.twoFactorSecret,
+      },
     );
 
     await logUserActivity(loggedInUser.userId, "triggered 2FA setup.");
@@ -188,10 +188,10 @@ export const verify2FA = async (req: AuthenticatedRequest, res: Response) => {
     await sendEmail(
       loggedInUser.email,
       "Two Factor Authentication Setup Successfully",
-      `
-        <h2>Congratulations!</h2>
-        <p>Your account has been set up with Two-Factor Authentication.</p>
-        `,
+      "2fa-success-email",
+      {
+        userName: user.firstName || user.username || "User",
+      },
     );
 
     await logUserActivity(loggedInUser.userId, "setup 2FA successfully.");
@@ -204,7 +204,90 @@ export const verify2FA = async (req: AuthenticatedRequest, res: Response) => {
   }
 };
 
-// export const disable2FA = async (
-//   req: AuthenticatedRequest,
-//   res: Response,
-// ) => {};
+export async function disable2Fa(req: AuthenticatedRequest, res: Response) {
+  try {
+    const loggedInUser = req.user;
+
+    const user = await findUserByEmail(loggedInUser.email);
+    if (!user) {
+      handleError(res, 404, "User not found");
+      return;
+    }
+
+    if (!user.twoFactorEnabled) {
+      handleError(res, 400, "2FA is not enabled");
+      return;
+    }
+
+    user.twoFactorSecret = generateOtp();
+    await user.save();
+
+    await sendEmailWithResend(
+      loggedInUser.email,
+      "Disable Two Factor Authentication",
+      "disable-2fa-code",
+      {
+        userName: user.firstName || user.username || "User",
+        code: user.twoFactorSecret,
+      },
+    );
+
+    await logUserActivity(loggedInUser.userId, "triggered 2FA Disable.");
+
+    res.status(200).json({
+      message: "Disable 2FA Triggered successfully",
+      success: true,
+    });
+  } catch (e) {
+    console.log("error");
+    handleError(res, 500, `Server error: ${e}`);
+  }
+}
+
+export async function verifyDisable2Fa(
+  req: AuthenticatedRequest,
+  res: Response,
+) {
+  try {
+    const loggedInUser = req.user;
+    const { secretCode } = req.body;
+
+    const user = await findUserByEmail(loggedInUser.email);
+    if (!user) {
+      handleError(res, 404, "User not found");
+      return;
+    }
+
+    if (!secretCode) {
+      handleError(res, 400, `Missing required field: secretCode`);
+      return;
+    }
+
+    if (secretCode !== user.twoFactorSecret) {
+      handleError(res, 400, `Invalid secret code`);
+      return;
+    }
+
+    user.twoFactorSecret = null;
+    user.twoFactorEnabled = false;
+    await user.save();
+
+    await sendEmail(
+      loggedInUser.email,
+      "Two Factor Authentication Disabled Successfully",
+      "disable-2fa-success",
+      {
+        userName: user.firstName || user.username || "User",
+      },
+    );
+
+    await logUserActivity(loggedInUser.userId, "2FA disabled successfully.");
+
+    res.status(200).json({
+      message: "2FA disabled successfully",
+      success: true,
+    });
+  } catch (e) {
+    handleError(res, 500, "Server error");
+  }
+}
