@@ -170,6 +170,52 @@ export const loginUser = async (req: Request, res: Response) => {
   }
 };
 
+export async function resend2fa(req: Request, res: Response) {
+  try {
+    const { email } = req.body;
+    const user = await findUserByEmail(email);
+
+    if (!user) {
+      handleError(res, 404, "OTP can not be send to this email");
+      return;
+    }
+
+    if (!user.isVerified) {
+      handleError(res, 400, "Please verify your email");
+      return;
+    }
+
+    if (user.isBlocked) {
+      handleError(res, 400, "You are already blocked. Contact Admin to login");
+      return;
+    }
+
+    if (!user.twoFactorEnabled) {
+      handleError(
+        res,
+        400,
+        "You don't have 2fa setup, OTP can not be send to this email",
+      );
+      return;
+    }
+
+    const twoFactorSecret = generateOtp();
+    await User.updateOne({ _id: user._id }, { twoFactorSecret });
+
+    await sendEmailWithResend(email, "2FA Code", "2fa-code-email", {
+      userName: user.firstName || user.username || "User",
+      code: twoFactorSecret,
+    });
+
+    res.status(200).json({
+      message: "2fa resent successfully",
+      success: true,
+    });
+  } catch (e) {
+    handleError(res, 500, `Server error: ${e}`);
+  }
+}
+
 export const forgotPassword = async (req: Request, res: Response) => {
   try {
     const { email } = req.body;
