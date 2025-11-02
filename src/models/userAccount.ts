@@ -49,12 +49,10 @@ const userAccountSchema = new Schema<IUserAccount>(
 
 // Method to calculate account level based on total spent
 userAccountSchema.methods.calculateAccountLevel = function (): AccountLevel {
-  if (this.totalOrders > 100) return AccountLevel.LEVEL_5;
-  if (this.totalOrders >= 99) return AccountLevel.LEVEL_4;
-  if (this.totalOrders >= 49) return AccountLevel.LEVEL_3;
-  if (this.totalOrders >= 19) return AccountLevel.LEVEL_2;
-  if (this.totalOrders >= 4) return AccountLevel.LEVEL_1;
-
+  if (this.totalOrders >= 100) return AccountLevel.LEVEL_5;
+  if (this.totalOrders >= 50) return AccountLevel.LEVEL_4;
+  if (this.totalOrders >= 20) return AccountLevel.LEVEL_3;
+  if (this.totalOrders >= 5) return AccountLevel.LEVEL_2;
   return AccountLevel.LEVEL_1;
 };
 
