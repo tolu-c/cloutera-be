@@ -64,61 +64,68 @@ export async function sendEmailWithResend(
   templateName: string,
   variables?: Record<string, string>,
 ) {
-  // Read HTML template
-  const templatePath = join(
-    __dirname,
-    "..",
-    "templates",
-    `${templateName}.html`,
-  );
-  let html = readFileSync(templatePath, "utf-8");
+  try {
+    // Read HTML template
+    const templatePath = join(
+      __dirname,
+      "..",
+      "templates",
+      `${templateName}.html`,
+    );
+    let html = readFileSync(templatePath, "utf-8");
 
-  // Replace variables in template
-  if (variables) {
-    Object.keys(variables).forEach((key) => {
-      const regex = new RegExp(`{{${key}}}`, "g");
-      html = html.replace(regex, variables[key]);
+    // Replace variables in template
+    if (variables) {
+      Object.keys(variables).forEach((key) => {
+        const regex = new RegExp(`{{${key}}}`, "g");
+        html = html.replace(regex, variables[key]);
+      });
+    }
+
+    // Read the CSS file
+    const cssPath = join(__dirname, "..", "assets", "output.css");
+    const css = readFileSync(cssPath, "utf-8");
+
+    // Replace link tag with inline style tag
+    html = html.replace(
+      /<link\s+rel=["']stylesheet["']\s+href=["'][^"']*["']\s*\/?>/gi,
+      `<style>${css}</style>`,
+    );
+
+    // Inline CSS into HTML elements
+    html = juice(html, {
+      removeStyleTags: true,
+      preserveMediaQueries: true,
+      preserveFontFaces: true,
     });
+
+    // Read and encode image as base64
+    const imagePath = join(__dirname, "..", "assets", "cloutera-header.png");
+    const imageBuffer = readFileSync(imagePath);
+    const base64Image = imageBuffer.toString("base64");
+    const dataUri = `data:image/png;base64,${base64Image}`;
+
+    // Replace image src with base64 data URI
+    html = html.replace(/src="\.\/cloutera-header\.png"/g, `src="${dataUri}"`);
+
+    const { data, error } = await resend.emails.send({
+      from: "Cloutera Hub <noreply@clouterahub.com>",
+      to: [to],
+      subject,
+      html,
+    });
+
+    if (error) {
+      console.error("Resend error:", error);
+      return console.log("Error sending email to", to);
+    }
+    if (data) {
+      console.log(`Resend Email: ${subject} email sent to: ${to}`);
+    }
+  } catch (error) {
+    console.error("Error in sendEmailWithResend:", error);
+    throw error;
   }
-
-  // Read the CSS file
-  const cssPath = join(__dirname, "..", "assets", "output.css");
-  const css = readFileSync(cssPath, "utf-8");
-
-  // Replace link tag with inline style tag
-  html = html.replace(
-    /<link\s+rel=["']stylesheet["']\s+href=["'][^"']*["']\s*\/?>/gi,
-    `<style>${css}</style>`,
-  );
-
-  // Inline CSS
-  html = juice(html, {
-    removeStyleTags: true,
-    preserveMediaQueries: true,
-    preserveFontFaces: true,
-  });
-
-  // Replace image src with CID
-  html = html.replace(
-    /src="\.\/cloutera-header\.png"/g,
-    'src="cid:cloutera-header"',
-  );
-
-  const { data, error } = await resend.emails.send({
-    from: "Cloutera Hub <noreply@clouterahub.com>",
-    to: [to],
-    subject,
-    html,
-  });
-
-  if (error) {
-    console.log(error);
-    return console.log("Error sending email to", to);
-  }
-  if (data) {
-    console.log(`Resend Email: ${subject} email sent to: ${to}`);
-  }
-  console.log("email data", { data });
 }
 
 export const sendEmail = async (

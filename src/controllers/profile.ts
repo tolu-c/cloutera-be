@@ -185,7 +185,7 @@ export const verify2FA = async (req: AuthenticatedRequest, res: Response) => {
     user.twoFactorEnabled = true;
     await user.save();
 
-    await sendEmail(
+    await sendEmailWithResend(
       loggedInUser.email,
       "Two Factor Authentication Setup Successfully",
       "2fa-success-email",
@@ -272,7 +272,7 @@ export async function verifyDisable2Fa(
     user.twoFactorEnabled = false;
     await user.save();
 
-    await sendEmail(
+    await sendEmailWithResend(
       loggedInUser.email,
       "Two Factor Authentication Disabled Successfully",
       "disable-2fa-success",
