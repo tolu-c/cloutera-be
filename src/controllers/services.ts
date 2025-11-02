@@ -1,15 +1,10 @@
-import { Response } from "express";
-import { AuthenticatedRequest } from "../middleware";
+import { Response, Request } from "express";
 import { handleError } from "../utils/errorHandler";
 import { Service } from "../models/service";
 import { PaginatedResponse } from "../types/service.types";
 
-export const getAllServices = async (
-  req: AuthenticatedRequest,
-  res: Response,
-) => {
+export const getAllServices = async (req: Request, res: Response) => {
   try {
-    const user = req.user;
     const {
       page = 1,
       limit = 50,
@@ -21,11 +16,6 @@ export const getAllServices = async (
       maxRate,
       cancel,
     } = req.query;
-
-    if (!user) {
-      handleError(res, 401, "Unauthorized");
-      return;
-    }
 
     const query: any = {};
 
@@ -132,17 +122,8 @@ export const getAllServices = async (
   }
 };
 
-export const getServicesCategories = async (
-  req: AuthenticatedRequest,
-  res: Response,
-) => {
+export const getServicesCategories = async (req: Request, res: Response) => {
   try {
-    const user = req.user;
-    if (!user) {
-      handleError(res, 401, "Unauthorized");
-      return;
-    }
-
     const categories = await Service.distinct("category");
     categories.sort();
 
@@ -161,17 +142,9 @@ export const getServicesCategories = async (
   }
 };
 
-export const getServiceById = async (
-  req: AuthenticatedRequest,
-  res: Response,
-) => {
+export const getServiceById = async (req: Request, res: Response) => {
   try {
-    const user = req.user;
     const { serviceId } = req.params;
-    if (!user) {
-      handleError(res, 401, "Unauthorized");
-      return;
-    }
 
     if (!serviceId) {
       handleError(res, 400, "Service ID is required");
