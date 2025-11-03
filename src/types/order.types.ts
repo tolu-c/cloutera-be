@@ -18,6 +18,6 @@ export type MultipleOrderStatus = Record<
 >;
 
 export interface PeakerBalance {
-  balance: number;
+  balance: string;
   currency: string;
 }

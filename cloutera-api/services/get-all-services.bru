@@ -5,16 +5,17 @@ meta {
 }
 
 get {
-  url: {{host}}/services?search=Twitter
+  url: {{host}}/services
   body: none
   auth: inherit
 }
 
 params:query {
-  search: Twitter
+  ~search: Twitter
   ~limit: 10
 }
 
 settings {
   encodeUrl: true
+  timeout: 0
 }

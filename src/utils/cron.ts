@@ -26,7 +26,9 @@ export async function checkPeakerBalanceCronJob() {
 
       const balanceData = await getPeakerBalance();
 
-      if (balanceData.balance < 20) {
+      const balance = Number(balanceData.balance);
+
+      if (balance < 20) {
         console.log(
           `Low balance detected: ${balanceData.balance} ${balanceData.currency}`,
         );
@@ -36,7 +38,7 @@ export async function checkPeakerBalanceCronJob() {
           "Low Balance Alert - Peaker Wallet",
           "low-balance-email",
           {
-            balance: balanceData.balance.toFixed(2),
+            balance: balance.toFixed(2),
             currency: balanceData.currency,
           },
         );
