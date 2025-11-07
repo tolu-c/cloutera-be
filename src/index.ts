@@ -39,12 +39,19 @@ const clientUrl = process.env.CLIENT_URL as string;
 const app = express();
 
 // Configure CORS BEFORE session/passport so preflight (OPTIONS) requests receive proper headers
-const allowedOrigins = [clientUrl, "https://www.clouterahub.com"];
+// Normalize origins by removing trailing slashes
+const allowedOrigins = [
+  clientUrl?.replace(/\/$/, ""),
+  "https://www.clouterahub.com"
+].filter(Boolean);
+
 const corsOptions = {
   origin: (origin: any, callback: any) => {
     // allow requests with no origin (like mobile apps or curl)
     if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin)) return callback(null, true);
+    // Normalize the incoming origin by removing trailing slash
+    const normalizedOrigin = origin.replace(/\/$/, "");
+    if (allowedOrigins.includes(normalizedOrigin)) return callback(null, true);
     return callback(new Error("Not allowed by CORS"));
   },
   credentials: true, // allow session cookies from the client
