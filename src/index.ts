@@ -38,6 +38,21 @@ const clientUrl = process.env.CLIENT_URL as string;
 
 const app = express();
 
+// Configure CORS BEFORE session/passport so preflight (OPTIONS) requests receive proper headers
+const allowedOrigins = [clientUrl, "https://www.clouterahub.com"];
+const corsOptions = {
+  origin: (origin: any, callback: any) => {
+    // allow requests with no origin (like mobile apps or curl)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    return callback(new Error("Not allowed by CORS"));
+  },
+  credentials: true, // allow session cookies from the client
+  methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+};
+app.use(cors(corsOptions));
+
 app.use(
   session({
     secret: process.env.SESSION_SECRET as string,
@@ -128,7 +143,6 @@ passport.deserializeUser(async (id: string, done) => {
 });
 
 app.use(express.json());
-app.use(cors());
 
 app.get(
   "/auth/google",

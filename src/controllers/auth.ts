@@ -8,7 +8,6 @@ import { UserRole } from "../types/enums";
 import {
   generateEmailToken,
   generateOtp,
-  sendEmail,
   sendEmailWithResend,
 } from "../utils";
 import {
@@ -125,6 +124,21 @@ export const loginUser = async (req: Request, res: Response) => {
       return;
     }
     if (!user.isVerified) {
+      user.emailVerificationToken = generateEmailToken();
+      await user.save();
+
+      const verifyAccountUrl = `${clientUrl}/verify-account/${email}/${user.emailVerificationToken}`;
+
+      await sendEmailWithResend(
+        user.email,
+        "Welcome to Cloutera",
+        "welcome-email",
+        {
+          userName: user.firstName || user.username || "User",
+          verifyUrl: verifyAccountUrl,
+        },
+      );
+
       handleError(res, 400, "Please verify your email");
       return;
     }
