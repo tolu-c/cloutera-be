@@ -7,7 +7,8 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "UV_THREADPOOL_SIZE=20 node dist/index.js",
     "dev": "UV_THREADPOOL_SIZE=20 ts-node src/index.ts",
-    "build": "tsc"
+    "build": "tsc && npm run copy-assets",
+    "copy-assets": "cp -r src/templates dist/ && cp -r src/assets dist/"
   },
   "keywords": [],
   "author": "tolu-c <tolu.adeyemo7@gmail.com>",
