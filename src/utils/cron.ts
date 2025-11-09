@@ -35,7 +35,6 @@ export async function checkPeakerBalanceCronJob() {
 
         await sendEmailWithResend(
           "oladosuolawale362@gmail.com",
-          "Low Balance Alert - Peaker Wallet",
           "low-balance-email",
           {
             balance: balance.toFixed(2),

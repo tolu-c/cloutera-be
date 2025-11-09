@@ -4,7 +4,7 @@ import { AuthenticatedRequest } from "../middleware";
 import User from "../models/user";
 import { findUserByEmail, findUserWithUsername } from "../helpers";
 import bcrypt from "bcrypt";
-import { generateOtp, sendEmail, sendEmailWithResend } from "../utils";
+import { generateOtp, sendEmailWithResend } from "../utils";
 import { logUserActivity } from "../utils/activityLogger";
 
 export const getUser = async (req: AuthenticatedRequest, res: Response) => {
@@ -138,15 +138,10 @@ export const setUp2FA = async (req: AuthenticatedRequest, res: Response) => {
     user.twoFactorSecret = generateOtp();
     await user.save();
 
-    await sendEmailWithResend(
-      loggedInUser.email,
-      "Setup Two Factor Authentication",
-      "2fa-code-email",
-      {
-        userName: user.firstName || user.username || "User",
-        code: user.twoFactorSecret,
-      },
-    );
+    await sendEmailWithResend(loggedInUser.email, "2fa-code", {
+      username: user.firstName || user.username || "User",
+      code: user.twoFactorSecret,
+    });
 
     await logUserActivity(loggedInUser.userId, "triggered 2FA setup.");
 
@@ -185,14 +180,9 @@ export const verify2FA = async (req: AuthenticatedRequest, res: Response) => {
     user.twoFactorEnabled = true;
     await user.save();
 
-    await sendEmailWithResend(
-      loggedInUser.email,
-      "Two Factor Authentication Setup Successfully",
-      "2fa-success-email",
-      {
-        userName: user.firstName || user.username || "User",
-      },
-    );
+    await sendEmailWithResend(loggedInUser.email, "2fa-code-success", {
+      username: user.firstName || user.username || "User",
+    });
 
     await logUserActivity(loggedInUser.userId, "setup 2FA successfully.");
 
@@ -222,15 +212,10 @@ export async function disable2Fa(req: AuthenticatedRequest, res: Response) {
     user.twoFactorSecret = generateOtp();
     await user.save();
 
-    await sendEmailWithResend(
-      loggedInUser.email,
-      "Disable Two Factor Authentication",
-      "disable-2fa-code",
-      {
-        userName: user.firstName || user.username || "User",
-        code: user.twoFactorSecret,
-      },
-    );
+    await sendEmailWithResend(loggedInUser.email, "disable-2fa-code", {
+      username: user.firstName || user.username || "User",
+      code: user.twoFactorSecret,
+    });
 
     await logUserActivity(loggedInUser.userId, "triggered 2FA Disable.");
 
@@ -272,14 +257,9 @@ export async function verifyDisable2Fa(
     user.twoFactorEnabled = false;
     await user.save();
 
-    await sendEmailWithResend(
-      loggedInUser.email,
-      "Two Factor Authentication Disabled Successfully",
-      "disable-2fa-success",
-      {
-        userName: user.firstName || user.username || "User",
-      },
-    );
+    await sendEmailWithResend(loggedInUser.email, "disable-2fa-success", {
+      username: user.firstName || user.username || "User",
+    });
 
     await logUserActivity(loggedInUser.userId, "2FA disabled successfully.");
 

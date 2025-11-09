@@ -5,11 +5,7 @@ import bcrypt from "bcrypt";
 import { handleError } from "../utils/errorHandler";
 import User, { IUser } from "../models/user";
 import { UserRole } from "../types/enums";
-import {
-  generateEmailToken,
-  generateOtp,
-  sendEmailWithResend,
-} from "../utils";
+import { generateEmailToken, generateOtp, sendEmailWithResend } from "../utils";
 import {
   findUserByEmail,
   findUserWithOtp,
@@ -61,15 +57,10 @@ export const signUpUser = async (req: Request, res: Response) => {
 
     const verifyAccountUrl = `${clientUrl}/verify-account/${email}/${user.emailVerificationToken}`;
 
-    await sendEmailWithResend(
-      user.email,
-      "Welcome to Cloutera",
-      "welcome-email",
-      {
-        userName: user.firstName || user.username || "User",
-        verifyUrl: verifyAccountUrl,
-      },
-    );
+    await sendEmailWithResend(user.email, "welcome", {
+      username: user.firstName || user.username || "User",
+      verifyUrl: verifyAccountUrl,
+    });
 
     res.status(201).json({
       message: "User successfully created",
@@ -129,15 +120,10 @@ export const loginUser = async (req: Request, res: Response) => {
 
       const verifyAccountUrl = `${clientUrl}/verify-account/${email}/${user.emailVerificationToken}`;
 
-      await sendEmailWithResend(
-        user.email,
-        "Welcome to Cloutera",
-        "welcome-email",
-        {
-          userName: user.firstName || user.username || "User",
-          verifyUrl: verifyAccountUrl,
-        },
-      );
+      await sendEmailWithResend(user.email, "welcome", {
+        username: user.firstName || user.username || "User",
+        verifyUrl: verifyAccountUrl,
+      });
 
       handleError(res, 400, "Please verify your email");
       return;
@@ -174,8 +160,8 @@ export const loginUser = async (req: Request, res: Response) => {
       const twoFactorSecret = generateOtp();
       await User.updateOne({ _id: user._id }, { twoFactorSecret });
 
-      await sendEmailWithResend(email, "2FA Code", "2fa-code-email", {
-        userName: user.firstName || user.username || "User",
+      await sendEmailWithResend(email, "2fa-code", {
+        username: user.firstName || user.username || "User",
         code: twoFactorSecret,
       });
     }
@@ -216,8 +202,8 @@ export async function resend2fa(req: Request, res: Response) {
     const twoFactorSecret = generateOtp();
     await User.updateOne({ _id: user._id }, { twoFactorSecret });
 
-    await sendEmailWithResend(email, "2FA Code", "2fa-code-email", {
-      userName: user.firstName || user.username || "User",
+    await sendEmailWithResend(email, "2fa-code", {
+      username: user.firstName || user.username || "User",
       code: twoFactorSecret,
     });
 
@@ -250,14 +236,12 @@ export const forgotPassword = async (req: Request, res: Response) => {
     // send email
     const resetPasswordUrl = `${clientUrl}/reset-password/${email}/${token}`;
 
-    console.log("token", token);
-    console.log("resetPasswordUrl", resetPasswordUrl);
     res.status(200).json({
       message: "Verification Email sent",
     });
 
-    await sendEmailWithResend(email, "Reset Password", "reset-password", {
-      userName: user.firstName || user.username || "User",
+    await sendEmailWithResend(email, "reset-password", {
+      username: user.firstName || user.username || "User",
       resetUrl: resetPasswordUrl,
     });
   } catch (e) {
