@@ -61,7 +61,7 @@ sendEmailQueue.process(async (job: Job) => {
 export async function sendEmailWithResend(
   to: string,
   templateName: string,
-  variables?: Record<string, string>,
+  variables?: Record<string, string | number>,
   subject?: string,
 ) {
   try {

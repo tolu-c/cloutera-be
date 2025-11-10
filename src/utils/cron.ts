@@ -37,12 +37,12 @@ export async function checkPeakerBalanceCronJob() {
           "oladosuolawale362@gmail.com",
           "low-balance-email",
           {
-            balance: balance.toFixed(2),
+            balance: Number(balance.toFixed(2)),
             currency: balanceData.currency,
           },
-        );
-
-        console.log("Low balance email sent successfully");
+        ).then(() => {
+          console.log("Low balance email sent successfully");
+        });
       } else {
         console.log(
           `Balance is sufficient: ${balanceData.balance} ${balanceData.currency}`,
