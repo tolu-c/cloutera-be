@@ -16,7 +16,11 @@ import accountRoutes from "./routes/userAccount";
 import adminRoutes from "./routes/adminRoutes";
 import notificationRoutes from "./routes/notificationRoutes";
 import activityRoutes from "./routes/activityRoutes";
-import { notificationCronJob, servicesCronJob, checkPeakerBalanceCronJob } from "./utils/cron";
+import {
+  notificationCronJob,
+  servicesCronJob,
+  checkPeakerBalanceCronJob,
+} from "./utils/cron";
 import { startOrderStatusCron } from "./jobs/orderStatusCron";
 import User, { IUser } from "./models/user";
 import { UserRole, UserStatus } from "./types/enums";
@@ -42,7 +46,8 @@ const app = express();
 // Normalize origins by removing trailing slashes
 const allowedOrigins = [
   clientUrl?.replace(/\/$/, ""),
-  "https://www.clouterahub.com"
+  "https://www.clouterahub.com",
+  "http://localhost:3000",
 ].filter(Boolean);
 
 const corsOptions = {
