@@ -1,19 +1,23 @@
-import { Response } from "express";
-import { AuthenticatedRequest } from "../middleware";
-import { handleError } from "../utils/errorHandler";
-import { UserAccount } from "../models/userAccount";
-import { Order } from "../models/orders";
-import { OrderStatus } from "../types/enums";
+import type { Response } from "express";
 import mongoose from "mongoose";
+import type { AuthenticatedRequest } from "../middleware";
 import {
   FundsHistory,
   PaymentMethod,
   TransactionStatus,
   TransactionType,
 } from "../models/fundHistory";
-import { logUserActivity } from "../utils/activityLogger";
+import { Order } from "../models/orders";
+import { UserAccount } from "../models/userAccount";
 import { initializePayment, verifyPayment } from "../services/paystack";
+import { OrderStatus } from "../types/enums";
+import { logUserActivity } from "../utils/activityLogger";
+import { handleError } from "../utils/errorHandler";
 
+// todo: admin add user balance
+export async function adminFundUserBalance(){}
+
+// todo: admin deductBalance
 export async function verifyUserPayment(
   req: AuthenticatedRequest,
   res: Response,
@@ -245,7 +249,7 @@ export const addFund = async (req: AuthenticatedRequest, res: Response) => {
         }
       });
 
-      await logUserActivity(user.userId, "added fund.");
+      await logUserActivity(user.userId, `added fund: ${amount}`);
 
       res.status(200).json({
         success: true,

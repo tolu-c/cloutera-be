@@ -21,6 +21,7 @@ export enum OrderStatus {
   REFUNDED = "Refunded",
   Partial = "Partial",
   Processing = "Processing",
+  InProgress = "In progress",
 }
 
 export enum AccountLevel {
@@ -29,4 +30,9 @@ export enum AccountLevel {
   LEVEL_3 = 3,
   LEVEL_4 = 4,
   LEVEL_5 = 5,
+}
+
+export enum AdminManageFundAction {
+  Add = "add",
+  Deduct = "deduct",
 }

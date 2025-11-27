@@ -1,19 +1,20 @@
 import express from "express";
-import { authenticateAdmin } from "../middleware";
-import {
-  deleteUser,
-  getCustomerAccountStatus,
-  getUserById,
-  getUserOrders,
-  getUsers,
-  getUserStats,
-  toggleBlockUser,
-} from "../controllers/admin/users";
-import { getOrdersList, getOrdersStats } from "../controllers/admin/orders";
 import {
   getDashboardStats,
   getDashboardTrends,
 } from "../controllers/admin/dashboard";
+import { getOrdersList, getOrdersStats } from "../controllers/admin/orders";
+import {
+  adminManageUserBalance,
+  deleteUser,
+  getCustomerAccountStatus,
+  getUserById,
+  getUserOrders,
+  getUserStats,
+  getUsers,
+  toggleBlockUser,
+} from "../controllers/admin/users";
+import { authenticateAdmin } from "../middleware";
 
 const router = express.Router();
 
@@ -25,6 +26,7 @@ router.patch("/users/:id/block", authenticateAdmin, toggleBlockUser);
 router.get("/users/:id/orders", authenticateAdmin, getUserOrders);
 router.get("/users/:id/account", authenticateAdmin, getCustomerAccountStatus);
 router.delete("/users/:id/delete", authenticateAdmin, deleteUser);
+router.post("/users/:id/manage-balance", authenticateAdmin, adminManageUserBalance);
 router.get("/orders/list", authenticateAdmin, getOrdersList);
 router.get("/orders/stats", authenticateAdmin, getOrdersStats);
 router.get("/dashboard/stats", authenticateAdmin, getDashboardStats);

@@ -1,0 +1,27 @@
+meta {
+  name: Manage user balance
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{host}}/admin/users/:id/manage-balance
+  body: json
+  auth: inherit
+}
+
+params:path {
+  id: 690ef230cd538f720b774fed
+}
+
+body:json {
+  {
+    "amount":100,
+    "action":"deduct"
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

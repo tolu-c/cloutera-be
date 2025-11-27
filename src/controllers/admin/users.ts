@@ -3,16 +3,21 @@
 // single user
 // block and unblock user
 
-import { AuthenticatedRequest } from "../../middleware";
-import { Response } from "express";
-import { handleError } from "../../utils/errorHandler";
-import User from "../../models/user";
-import { PaginatedResponse, UserStats } from "../../types/service.types";
-import { createPaginationQuery } from "../../utils/createPaginationQuery";
-import { OrderStatus, UserStatus } from "../../types/enums";
+import type { Response } from "express";
 import { findUserById } from "../../helpers";
+import type { AuthenticatedRequest } from "../../middleware";
 import { Order } from "../../models/orders";
+import User from "../../models/user";
 import { UserAccount } from "../../models/userAccount";
+import {
+  AdminManageFundAction,
+  OrderStatus,
+  UserStatus,
+} from "../../types/enums";
+import type { PaginatedResponse, UserStats } from "../../types/service.types";
+import { logUserActivity } from "../../utils/activityLogger";
+import { createPaginationQuery } from "../../utils/createPaginationQuery";
+import { handleError } from "../../utils/errorHandler";
 
 export const getUserStats = async (
   req: AuthenticatedRequest,
@@ -392,6 +397,114 @@ export async function deleteUser(req: AuthenticatedRequest, res: Response) {
       message: "User deleted",
     });
   } catch (e) {
+    handleError(res, 500, `Server error: ${e}`);
+  }
+}
+
+class ValidationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ValidationError";
+  }
+}
+
+interface AdminManageUserBalanceBody {
+  amount: number;
+  action: AdminManageFundAction;
+}
+
+function validateManageBalanceBody(
+  body: any,
+): asserts body is AdminManageUserBalanceBody {
+  if (!body || typeof body !== "object") {
+    throw new ValidationError("Request body is required");
+  }
+
+  if (typeof body.amount !== "number" || isNaN(body.amount)) {
+    throw new ValidationError("amount must be a valid number");
+  }
+
+  if (body.amount <= 0) {
+    throw new ValidationError("amount must be greater than 0");
+  }
+
+  // Round to 2 decimal places for currency precision
+  body.amount = Math.round(body.amount * 100) / 100;
+
+  if (
+    !body.action ||
+    !Object.values(AdminManageFundAction).includes(body.action)
+  ) {
+    throw new ValidationError("action must be either 'add' or 'deduct'");
+  }
+}
+
+export async function adminManageUserBalance(
+  req: AuthenticatedRequest,
+  res: Response,
+): Promise<void> {
+  try {
+    const { id } = req.params;
+    const admin = req.user;
+
+    // Validate request body
+    validateManageBalanceBody(req.body);
+    const { amount, action } = req.body;
+
+    const user = await findUserById(id);
+
+    if (!user) {
+      return handleError(res, 404, "User not found");
+    }
+
+    let userAccount = await UserAccount.findOne({
+      userId: user._id,
+    });
+
+    if (!userAccount) {
+      userAccount = new UserAccount({
+        userId: user._id,
+        balance: 0,
+        totalSpent: 0,
+        totalOrders: 0,
+      });
+      await userAccount.save();
+    }
+
+    // Manage user funds
+    if (action === AdminManageFundAction.Add) {
+      userAccount.balance = Math.round((userAccount.balance + amount) * 100) / 100;
+    } else {
+      if (userAccount.balance < amount) {
+        return handleError(
+          res,
+          400,
+          `Insufficient balance. Cannot deduct ${amount} from user account`,
+        );
+      }
+      userAccount.balance = Math.round((userAccount.balance - amount) * 100) / 100;
+    }
+
+    await userAccount.save();
+
+    await logUserActivity(
+      user._id as string,
+      `account ${action === AdminManageFundAction.Add ? "funded with" : "deducted with"} ${amount} by Admin: ${admin.email}`,
+    );
+
+    const successMessage =
+      action === AdminManageFundAction.Add
+        ? "Funds added to user account successfully"
+        : "Funds deducted from user account successfully";
+
+    res.status(200).json({
+      success: true,
+      message: successMessage,
+    });
+  } catch (e) {
+    if (e instanceof ValidationError) {
+      return handleError(res, 400, e.message);
+    }
     handleError(res, 500, `Server error: ${e}`);
   }
 }

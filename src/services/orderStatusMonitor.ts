@@ -1,7 +1,6 @@
 import { Order } from "../models/orders";
 import { OrderStatus } from "../types/enums";
 import { getPeakerBulkOrders } from "./peaker";
-import { PeakerOrderStatus } from "../types/order.types";
 
 // In-memory state to track pending orders
 let pendingOrders: Set<number> = new Set();
@@ -14,7 +13,12 @@ export async function initializePendingOrders() {
   try {
     const orders = await Order.find({
       status: {
-        $in: [OrderStatus.PENDING, OrderStatus.Processing, OrderStatus.Partial],
+        $in: [
+          OrderStatus.PENDING,
+          OrderStatus.Processing,
+          OrderStatus.Partial,
+          OrderStatus.InProgress,
+        ],
       },
     }).select("orderId");
 
@@ -76,7 +80,12 @@ export async function monitorOrderStatuses() {
     // Get fresh list of pending orders from database
     const orders = await Order.find({
       status: {
-        $in: [OrderStatus.PENDING, OrderStatus.Processing, OrderStatus.Partial],
+        $in: [
+          OrderStatus.PENDING,
+          OrderStatus.Processing,
+          OrderStatus.Partial,
+          OrderStatus.InProgress,
+        ],
       },
     }).select("orderId status");
 
@@ -117,9 +126,7 @@ export async function monitorOrderStatuses() {
           // Check if response is an error
           if (isPeakerError(peakerStatus)) {
             errorCount++;
-            console.error(
-              `Error for order ${orderId}: ${peakerStatus.error}`,
-            );
+            console.error(`Error for order ${orderId}: ${peakerStatus.error}`);
             continue;
           }
 

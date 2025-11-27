@@ -1,5 +1,5 @@
+import type { Response } from "express";
 import mongoose from "mongoose";
-import { Response } from "express";
 import User from "../models/user";
 import { handleError } from "../utils/errorHandler";
 

@@ -1,5 +1,5 @@
-import { Activity } from "../models/activity";
 import { findUserById } from "../helpers";
+import { Activity } from "../models/activity";
 
 export async function logUserActivity(userId: string, action: string) {
   const user = await findUserById(userId);

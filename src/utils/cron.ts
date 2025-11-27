@@ -1,13 +1,12 @@
 import { CronJob } from "cron";
-import { fetchAndSaveServices, getPeakerBalance } from "../services/peaker";
 import { processRescheduledNotifications } from "../services/notification";
+import { fetchAndSaveServices, getPeakerBalance } from "../services/peaker";
 import { sendEmailWithResend } from "./index";
 
 export const servicesCronJob = () => {
   const job = new CronJob("0 0 * * *", fetchAndSaveServices); // Runs every day at midnight
 
   console.log("started cron job");
-
   job.start();
 };
 
@@ -20,6 +19,7 @@ export async function notificationCronJob() {
 }
 
 export async function checkPeakerBalanceCronJob() {
+ // 0 0 * * *
   const job = new CronJob("0 0 * * *", async () => {
     try {
       console.log("Checking Peaker balance...");

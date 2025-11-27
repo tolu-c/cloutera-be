@@ -1,20 +1,19 @@
-import { Request, Response } from "express";
-import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
-
-import { handleError } from "../utils/errorHandler";
-import User, { IUser } from "../models/user";
-import { UserRole } from "../types/enums";
-import { generateEmailToken, generateOtp, sendEmailWithResend } from "../utils";
+import type { Request, Response } from "express";
+import jwt from "jsonwebtoken";
+import { SALT_ROUNDS } from "../constants";
 import {
   findUserByEmail,
   findUserWithOtp,
   findUserWithToken,
   findUserWithUsername,
 } from "../helpers";
-import { AuthenticatedRequest } from "../middleware";
-import { SALT_ROUNDS } from "../constants";
+import type { AuthenticatedRequest } from "../middleware";
+import User, { type IUser } from "../models/user";
+import { UserRole } from "../types/enums";
+import { generateEmailToken, generateOtp, sendEmailWithResend } from "../utils";
 import { logUserActivity } from "../utils/activityLogger";
+import { handleError } from "../utils/errorHandler";
 
 export const generateToken = (user: IUser): string => {
   return jwt.sign(

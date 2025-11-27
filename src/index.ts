@@ -1,31 +1,30 @@
-import express, { Request, Response } from "express";
+import MongoStore from "connect-mongo";
 import cors from "cors";
-import mongoose from "mongoose";
 import dotenv from "dotenv";
+import express, { type Request, type Response } from "express";
+import session from "express-session";
+import mongoose from "mongoose";
 import passport from "passport";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
-import session from "express-session";
-import MongoStore from "connect-mongo";
-
-import authRoutes from "./routes/authRoutes";
-import profileRoutes from "./routes/profileRoutes";
-import faqRoutes from "./routes/faqsRoutes";
-import servicesRoutes from "./routes/servicesRoutes";
-import ordersRoutes from "./routes/ordersRoutes";
-import accountRoutes from "./routes/userAccount";
-import adminRoutes from "./routes/adminRoutes";
-import notificationRoutes from "./routes/notificationRoutes";
+import { generateToken } from "./controllers/auth";
+import { startOrderStatusCron } from "./jobs/orderStatusCron";
+import User, { type IUser } from "./models/user";
 import activityRoutes from "./routes/activityRoutes";
+import adminRoutes from "./routes/adminRoutes";
+import authRoutes from "./routes/authRoutes";
+import faqRoutes from "./routes/faqsRoutes";
+import notificationRoutes from "./routes/notificationRoutes";
+import ordersRoutes from "./routes/ordersRoutes";
+import profileRoutes from "./routes/profileRoutes";
+import servicesRoutes from "./routes/servicesRoutes";
+import accountRoutes from "./routes/userAccount";
+import { UserRole, UserStatus } from "./types/enums";
+import { logUserActivity } from "./utils/activityLogger";
 import {
+  checkPeakerBalanceCronJob,
   notificationCronJob,
   servicesCronJob,
-  checkPeakerBalanceCronJob,
 } from "./utils/cron";
-import { startOrderStatusCron } from "./jobs/orderStatusCron";
-import User, { IUser } from "./models/user";
-import { UserRole, UserStatus } from "./types/enums";
-import { generateToken } from "./controllers/auth";
-import { logUserActivity } from "./utils/activityLogger";
 
 dotenv.config();
 

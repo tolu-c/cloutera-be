@@ -1,5 +1,5 @@
-import axios, { AxiosResponse } from "axios";
-import {
+import axios, { type AxiosResponse } from "axios";
+import type {
   InitializePaymentResponse,
   VerifyPaymentResponse,
 } from "../types/service.types";
@@ -11,6 +11,7 @@ export async function initializePayment(email: string, amount: string) {
       {
         email,
         amount,
+        bearer: "subaccount",
       },
       {
         headers: {
