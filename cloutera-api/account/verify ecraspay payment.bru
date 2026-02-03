@@ -1,0 +1,20 @@
+meta {
+  name: verify ecraspay payment
+  type: http
+  seq: 7
+}
+
+get {
+  url: {{host}}/account/ercaspay/verify-payment/:transactionRef
+  body: none
+  auth: inherit
+}
+
+params:path {
+  transactionRef: ER|A0FDA10F39274
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

@@ -9,13 +9,14 @@ import {
 } from "../models/fundHistory";
 import { Order } from "../models/orders";
 import { UserAccount } from "../models/userAccount";
+import {
+  initializePayment as initializeErcaspay,
+  verifyPayment as verifyErcaspay,
+} from "../services/ercaspay";
 import { initializePayment, verifyPayment } from "../services/paystack";
-import { OrderStatus } from "../types/enums";
+import { EcrasPaymentStatus, OrderStatus } from "../types/enums";
 import { logUserActivity } from "../utils/activityLogger";
 import { handleError } from "../utils/errorHandler";
-
-// todo: admin add user balance
-export async function adminFundUserBalance(){}
 
 // todo: admin deductBalance
 export async function verifyUserPayment(
@@ -70,6 +71,95 @@ export async function initializeUserPayment(
       res,
       500,
       `${error instanceof Error ? error.message : "Error adding funds"}`,
+    );
+  }
+}
+
+export async function initializeErcaspayPayment(
+  req: AuthenticatedRequest,
+  res: Response,
+) {
+  try {
+    const user = req.user;
+    const { amount, description, redirectUrl } = req.body;
+
+    if (!user) {
+      handleError(res, 401, "Unauthorized");
+      return;
+    }
+
+    // const fullUser = await findUserByEmail(user?.email)
+
+    if (!amount || amount < 100) {
+      handleError(res, 400, "Amount must be at least 100 naira");
+      return;
+    }
+
+    const response = await initializeErcaspay({
+      amount,
+      customerName: user.firstName
+        ? `${user.firstName} ${user.lastName || ""}`.trim()
+        : user.email,
+      customerEmail: user.email,
+      description,
+      redirectUrl,
+      metadata: {
+        userId: user.userId,
+      },
+    });
+
+    if (!response.requestSuccessful) {
+      handleError(res, 400, response.responseMessage);
+      return;
+    }
+
+    res.status(200).json({
+      success: true,
+      message: response.responseMessage,
+      data: {
+        checkoutUrl: response.responseBody.checkoutUrl,
+        paymentReference: response.responseBody.paymentReference,
+        transactionReference: response.responseBody.transactionReference,
+      },
+    });
+  } catch (error) {
+    handleError(
+      res,
+      500,
+      `${error instanceof Error ? error.message : "Error initializing Ercaspay payment"}`,
+    );
+  }
+}
+
+export async function verifyErcaspayPayment(
+  req: AuthenticatedRequest,
+  res: Response,
+) {
+  try {
+    const { transactionRef } = req.params;
+
+    if (!transactionRef) {
+      handleError(res, 400, "Transaction reference is required");
+      return;
+    }
+
+    const response = await verifyErcaspay(transactionRef);
+
+    if (!response.requestSuccessful) {
+      handleError(res, 400, response.responseMessage);
+      return;
+    }
+
+    res.status(200).json({
+      success: true,
+      message: response.responseMessage,
+      data: response.responseBody,
+    });
+  } catch (error) {
+    handleError(
+      res,
+      500,
+      `${error instanceof Error ? error.message : "Error verifying Ercaspay payment"}`,
     );
   }
 }
@@ -177,7 +267,7 @@ export const addFund = async (req: AuthenticatedRequest, res: Response) => {
       return;
     }
 
-    if (status !== "success") {
+    if (status !== EcrasPaymentStatus.Success) {
       handleError(res, 400, "Payment was not successful");
       return;
     }

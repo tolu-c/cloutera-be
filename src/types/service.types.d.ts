@@ -143,3 +143,51 @@ export type PayStackPaymentStatus =
   | "processing"
   | "queued"
   | "reversed";
+
+// Ercaspay API Response Types
+export interface ErcaspayBaseResponse<T> {
+  requestSuccessful: boolean;
+  responseCode: string;
+  responseMessage: string;
+  responseBody: T;
+}
+
+export interface ErcaspayInitiateResponseBody {
+  paymentReference: string;
+  transactionReference: string;
+  checkoutUrl: string;
+}
+
+export interface ErcaspayVerifyResponseBody {
+  domain: string;
+  status: ErcaspayPaymentStatus;
+  ercs_reference: string;
+  tx_reference: string;
+  amount: number;
+  description: string | null;
+  paid_at: string | null;
+  created_at: string;
+  channel: string;
+  currency: string;
+  metadata: string | null;
+  fee: number;
+  fee_bearer: string;
+  settled_amount: number;
+  customer: {
+    name: string;
+    phone_number: string;
+    email: string;
+    reference: string;
+  };
+}
+
+export type ErcaspayPaymentStatus =
+  | "SUCCESSFUL"
+  | "PENDING"
+  | "FAILED"
+  | "ABANDONED";
+
+export type ErcaspayInitiateResponse =
+  ErcaspayBaseResponse<ErcaspayInitiateResponseBody>;
+export type ErcaspayVerifyResponse =
+  ErcaspayBaseResponse<ErcaspayVerifyResponseBody>;

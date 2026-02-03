@@ -1,0 +1,23 @@
+meta {
+  name: initialize ecras pay
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{host}}/account/ercaspay/initialize-payment
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "amount":500,
+    "description": "adding 500 to wallet"
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

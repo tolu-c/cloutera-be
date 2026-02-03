@@ -15,6 +15,7 @@ export enum PaymentMethod {
   FLUTTERWAVE = "FlutterWave",
   BANK_TRANSFER = "Bank Transfer",
   PAYSTACK = "PayStack",
+  ECRAS = "EcrasPay",
   SYSTEM = "System",
 }
 

@@ -36,3 +36,12 @@ export enum AdminManageFundAction {
   Add = "add",
   Deduct = "deduct",
 }
+
+export enum Currency {
+  NGN = "NGN",
+}
+
+export enum EcrasPaymentStatus {
+  Success = "SUCCESSFUL",
+  Failure = "FAILED",
+}
