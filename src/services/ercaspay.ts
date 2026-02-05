@@ -80,7 +80,7 @@ export async function verifyPayment(
 ): Promise<ErcaspayVerifyResponse> {
   try {
     const res: AxiosResponse<ErcaspayVerifyResponse> = await axios.get(
-      `${ERCASPAY_BASE_URL}/api/v1/payment/transaction/verify/${transactionRef}`,
+      `${ERCASPAY_BASE_URL}/payment/transaction/verify/${transactionRef}`,
       {
         headers: {
           Authorization: `Bearer ${process.env.ERCAS_SECRET_KEY}`,

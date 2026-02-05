@@ -28,7 +28,7 @@ export interface IFundsHistory extends Document {
   type: TransactionType;
   balanceBefore: number;
   balanceAfter: number;
-  // reference?: string;
+  externalReference?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -78,11 +78,11 @@ const fundsHistorySchema = new Schema<IFundsHistory>(
       required: true,
       min: 0,
     },
-    // reference: {
-    //   type: String,
-    //   sparse: true,
-    //   index: true
-    // }
+    externalReference: {
+      type: String,
+      sparse: true,
+      index: true,
+    },
   },
   {
     timestamps: true,

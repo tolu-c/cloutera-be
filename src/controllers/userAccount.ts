@@ -13,67 +13,9 @@ import {
   initializePayment as initializeErcaspay,
   verifyPayment as verifyErcaspay,
 } from "../services/ercaspay";
-import { initializePayment, verifyPayment } from "../services/paystack";
 import { EcrasPaymentStatus, OrderStatus } from "../types/enums";
 import { logUserActivity } from "../utils/activityLogger";
 import { handleError } from "../utils/errorHandler";
-
-// todo: admin deductBalance
-export async function verifyUserPayment(
-  req: AuthenticatedRequest,
-  res: Response,
-) {
-  try {
-    const { reference } = req.params;
-
-    if (!reference) {
-      handleError(res, 400, "Reference is required");
-      return;
-    }
-
-    const response = await verifyPayment(reference);
-
-    res.status(200).json({
-      success: true,
-      message: response.message,
-      data: response.data,
-    });
-  } catch (error) {
-    handleError(
-      res,
-      500,
-      `${error instanceof Error ? error.message : "Error adding funds"}`,
-    );
-  }
-}
-
-export async function initializeUserPayment(
-  req: AuthenticatedRequest,
-  res: Response,
-) {
-  try {
-    const { email, amount } = req.body;
-
-    if (!email || !amount) {
-      handleError(res, 400, "Email and amount are required");
-      return;
-    }
-
-    const response = await initializePayment(email, amount);
-
-    res.status(200).json({
-      data: response.data,
-      success: true,
-      message: response.message,
-    });
-  } catch (error) {
-    handleError(
-      res,
-      500,
-      `${error instanceof Error ? error.message : "Error adding funds"}`,
-    );
-  }
-}
 
 export async function initializeErcaspayPayment(
   req: AuthenticatedRequest,
@@ -87,8 +29,6 @@ export async function initializeErcaspayPayment(
       handleError(res, 401, "Unauthorized");
       return;
     }
-
-    // const fullUser = await findUserByEmail(user?.email)
 
     if (!amount || amount < 100) {
       handleError(res, 400, "Amount must be at least 100 naira");
@@ -135,14 +75,23 @@ export async function verifyErcaspayPayment(
   req: AuthenticatedRequest,
   res: Response,
 ) {
+  const session = await mongoose.startSession();
+
   try {
+    const user = req.user;
     const { transactionRef } = req.params;
+
+    if (!user) {
+      handleError(res, 401, "Unauthorized");
+      return;
+    }
 
     if (!transactionRef) {
       handleError(res, 400, "Transaction reference is required");
       return;
     }
 
+    // Verify payment with Ercaspay API (server-side truth)
     const response = await verifyErcaspay(transactionRef);
 
     if (!response.requestSuccessful) {
@@ -150,10 +99,74 @@ export async function verifyErcaspayPayment(
       return;
     }
 
+    if (response.responseBody.status !== EcrasPaymentStatus.Success) {
+      handleError(res, 400, `Payment status: ${response.responseBody.status}`);
+      return;
+    }
+
+    // Check for duplicate transaction using external reference
+    const existingTransaction = await FundsHistory.findOne({
+      externalReference: transactionRef,
+    });
+
+    if (existingTransaction?.status === TransactionStatus.SUCCESSFUL) {
+      res.status(200).json({
+        success: true,
+        message: "Transaction already processed",
+        data: response.responseBody,
+      });
+      return;
+    }
+
+    // Credit user balance in a database transaction
+    let balanceAfter = 0;
+    const amount = response.responseBody.amount;
+
+    await session.withTransaction(async () => {
+      let userAccount = await UserAccount.findOne({
+        userId: user.userId,
+      }).session(session);
+
+      if (!userAccount) {
+        userAccount = new UserAccount({
+          userId: user.userId,
+          balance: 0,
+          totalSpent: 0,
+        });
+      }
+
+      const balanceBefore = userAccount.balance;
+      userAccount.balance += amount;
+      balanceAfter = userAccount.balance;
+
+      await userAccount.save({ session });
+
+      const fundsHistory = new FundsHistory({
+        userId: user.userId,
+        paymentMethod: PaymentMethod.ECRAS,
+        amount,
+        status: TransactionStatus.SUCCESSFUL,
+        type: TransactionType.CREDIT,
+        balanceBefore,
+        balanceAfter,
+        externalReference: transactionRef,
+      });
+
+      await fundsHistory.save({ session });
+    });
+
+    await logUserActivity(
+      user.userId,
+      `verified Ercaspay payment: ${transactionRef}`,
+    );
+
     res.status(200).json({
       success: true,
-      message: response.responseMessage,
-      data: response.responseBody,
+      message: "Payment verified and funds added successfully",
+      data: {
+        ...response.responseBody,
+        newBalance: balanceAfter,
+      },
     });
   } catch (error) {
     handleError(
@@ -161,6 +174,8 @@ export async function verifyErcaspayPayment(
       500,
       `${error instanceof Error ? error.message : "Error verifying Ercaspay payment"}`,
     );
+  } finally {
+    await session.endSession();
   }
 }
 
@@ -239,127 +254,6 @@ export const getAccountStatus = async (
       res,
       500,
       `${error instanceof Error ? error.message : "Error fetching account status"}`,
-    );
-  }
-};
-
-export const addFund = async (req: AuthenticatedRequest, res: Response) => {
-  try {
-    const user = req.user;
-    const {
-      amount,
-      paymentMethod = PaymentMethod.SYSTEM,
-      status,
-      tx_reference,
-    } = req.body;
-
-    if (!user) {
-      handleError(res, 401, "Unauthorized");
-      return;
-    }
-
-    if (!amount || amount <= 0) {
-      handleError(res, 400, "Amount must be greater than 0");
-      return;
-    }
-    if (!status || !tx_reference) {
-      handleError(res, 400, "Status and transaction reference are required");
-      return;
-    }
-
-    if (status !== EcrasPaymentStatus.Success) {
-      handleError(res, 400, "Payment was not successful");
-      return;
-    }
-
-    // Check if transaction already exists
-    const existingTransaction = await FundsHistory.findOne({
-      transactionId: tx_reference,
-      userId: user.userId,
-    });
-
-    if (existingTransaction) {
-      if (existingTransaction.status === TransactionStatus.SUCCESSFUL) {
-        res.status(200).json({
-          success: true,
-          message: "Transaction already processed",
-          data: {
-            newBalance:
-              (await UserAccount.findOne({ userId: user.userId }))?.balance ||
-              0,
-            amountAdded: amount,
-            accountLevel: (await UserAccount.findOne({ userId: user.userId }))
-              ?.accountLevel,
-          },
-        });
-      }
-    }
-
-    // Get or create user account
-    let userAccount = await UserAccount.findOne({ userId: user.userId });
-
-    if (!userAccount) {
-      userAccount = new UserAccount({
-        userId: user.userId,
-        balance: 0,
-        totalSpent: 0,
-      });
-    }
-
-    const balanceBefore = userAccount.balance;
-    // Add funds to balance
-    userAccount.balance += amount;
-    const balanceAfter = userAccount.balance;
-
-    const session = await mongoose.startSession();
-
-    try {
-      await session.withTransaction(async () => {
-        await userAccount.save({ session });
-
-        if (existingTransaction) {
-          // Update existing transaction
-          existingTransaction.status = TransactionStatus.SUCCESSFUL;
-          existingTransaction.balanceAfter = balanceAfter;
-          await existingTransaction.save({ session });
-        } else {
-          // Create new fund history record
-          const fundsHistory = new FundsHistory({
-            userId: user.userId,
-            paymentMethod,
-            amount,
-            status: TransactionStatus.SUCCESSFUL,
-            type: TransactionType.CREDIT,
-            balanceBefore,
-            balanceAfter,
-            transactionId: tx_reference,
-          });
-
-          await fundsHistory.save({ session });
-        }
-      });
-
-      await logUserActivity(user.userId, `added fund: ${amount}`);
-
-      res.status(200).json({
-        success: true,
-        message: "Funds added successfully",
-        data: {
-          newBalance: userAccount.balance,
-          amountAdded: amount,
-          accountLevel: userAccount.accountLevel,
-        },
-      });
-    } catch (transactionError) {
-      throw transactionError;
-    } finally {
-      await session.endSession();
-    }
-  } catch (error) {
-    handleError(
-      res,
-      500,
-      `${error instanceof Error ? error.message : "Error adding funds"}`,
     );
   }
 };
