@@ -5,9 +5,7 @@ import type {
   ErcaspayVerifyResponse,
 } from "../types/service.types";
 import { Currency } from "../types/enums";
-
-const ERCASPAY_BASE_URL =
-  process.env.ERCAS_URL || "https://api.ercaspay.com/api/v1";
+import { getErcaspayBaseUrl, getErcaspaySecretKey } from "../constants";
 
 interface ErcaspayInitiateRequest {
   amount: number;
@@ -39,7 +37,7 @@ export async function initializePayment(data: {
   try {
     const paymentReference = generatePaymentReference();
     const redirectUrl = `${process.env.CLIENT_URL}/${process.env.ERCAS_REDIRECT_URL}`;
-    const url = `${ERCASPAY_BASE_URL}/payment/initiate`;
+    const url = `${getErcaspayBaseUrl()}/payment/initiate`;
 
     const requestBody: ErcaspayInitiateRequest = {
       amount: data.amount,
@@ -59,7 +57,7 @@ export async function initializePayment(data: {
       requestBody,
       {
         headers: {
-          Authorization: `Bearer ${process.env.ERCAS_SECRET_KEY}`,
+          Authorization: `Bearer ${getErcaspaySecretKey()}`,
           "Content-Type": "application/json",
           Accept: "application/json",
         },
@@ -80,10 +78,10 @@ export async function verifyPayment(
 ): Promise<ErcaspayVerifyResponse> {
   try {
     const res: AxiosResponse<ErcaspayVerifyResponse> = await axios.get(
-      `${ERCASPAY_BASE_URL}/payment/transaction/verify/${transactionRef}`,
+      `${getErcaspayBaseUrl()}/payment/transaction/verify/${transactionRef}`,
       {
         headers: {
-          Authorization: `Bearer ${process.env.ERCAS_SECRET_KEY}`,
+          Authorization: `Bearer ${getErcaspaySecretKey()}`,
           "Content-Type": "application/json",
           Accept: "application/json",
         },

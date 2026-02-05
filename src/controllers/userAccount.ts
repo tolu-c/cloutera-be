@@ -75,8 +75,6 @@ export async function verifyErcaspayPayment(
   req: AuthenticatedRequest,
   res: Response,
 ) {
-  const session = await mongoose.startSession();
-
   try {
     const user = req.user;
     const { transactionRef } = req.params;
@@ -122,38 +120,43 @@ export async function verifyErcaspayPayment(
     let balanceAfter = 0;
     const amount = response.responseBody.amount;
 
-    await session.withTransaction(async () => {
-      let userAccount = await UserAccount.findOne({
-        userId: user.userId,
-      }).session(session);
-
-      if (!userAccount) {
-        userAccount = new UserAccount({
+    const session = await mongoose.startSession();
+    try {
+      await session.withTransaction(async () => {
+        let userAccount = await UserAccount.findOne({
           userId: user.userId,
-          balance: 0,
-          totalSpent: 0,
+        }).session(session);
+
+        if (!userAccount) {
+          userAccount = new UserAccount({
+            userId: user.userId,
+            balance: 0,
+            totalSpent: 0,
+          });
+        }
+
+        const balanceBefore = userAccount.balance;
+        userAccount.balance += amount;
+        balanceAfter = userAccount.balance;
+
+        await userAccount.save({ session });
+
+        const fundsHistory = new FundsHistory({
+          userId: user.userId,
+          paymentMethod: PaymentMethod.ECRAS,
+          amount,
+          status: TransactionStatus.SUCCESSFUL,
+          type: TransactionType.CREDIT,
+          balanceBefore,
+          balanceAfter,
+          externalReference: transactionRef,
         });
-      }
 
-      const balanceBefore = userAccount.balance;
-      userAccount.balance += amount;
-      balanceAfter = userAccount.balance;
-
-      await userAccount.save({ session });
-
-      const fundsHistory = new FundsHistory({
-        userId: user.userId,
-        paymentMethod: PaymentMethod.ECRAS,
-        amount,
-        status: TransactionStatus.SUCCESSFUL,
-        type: TransactionType.CREDIT,
-        balanceBefore,
-        balanceAfter,
-        externalReference: transactionRef,
+        await fundsHistory.save({ session });
       });
-
-      await fundsHistory.save({ session });
-    });
+    } finally {
+      await session.endSession();
+    }
 
     await logUserActivity(
       user.userId,
@@ -174,8 +177,6 @@ export async function verifyErcaspayPayment(
       500,
       `${error instanceof Error ? error.message : "Error verifying Ercaspay payment"}`,
     );
-  } finally {
-    await session.endSession();
   }
 }
 

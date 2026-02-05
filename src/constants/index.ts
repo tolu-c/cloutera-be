@@ -9,4 +9,8 @@ export const API_URL = "https://peakerr.com/api/v2";
 export const getPeakerApiKey = (): string =>
   required(process.env.PEAKER_API_KEY);
 
+export const getErcaspaySecretKey = () =>
+  required(process.env.ERCAS_SECRET_KEY);
+export const getErcaspayBaseUrl = () => required(process.env.ERCAS_URL);
+
 export const SALT_ROUNDS = 8;
