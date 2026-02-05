@@ -7,7 +7,7 @@ import type {
 import { Currency } from "../types/enums";
 
 const ERCASPAY_BASE_URL =
-  process.env.ERCAS_URL || "https://api-staging.ercaspay.com";
+  process.env.ERCAS_URL || "https://api.ercaspay.com/api/v1";
 
 interface ErcaspayInitiateRequest {
   amount: number;
@@ -39,6 +39,7 @@ export async function initializePayment(data: {
   try {
     const paymentReference = generatePaymentReference();
     const redirectUrl = `${process.env.CLIENT_URL}/${process.env.ERCAS_REDIRECT_URL}`;
+    const url = `${ERCASPAY_BASE_URL}/payment/initiate`;
 
     const requestBody: ErcaspayInitiateRequest = {
       amount: data.amount,
@@ -54,7 +55,7 @@ export async function initializePayment(data: {
     };
 
     const res: AxiosResponse<ErcaspayInitiateResponse> = await axios.post(
-      `${ERCASPAY_BASE_URL}/api/v1/payment/initiate`,
+      url,
       requestBody,
       {
         headers: {
