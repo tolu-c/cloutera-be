@@ -5,11 +5,17 @@ meta {
 }
 
 get {
-  url: {{host}}/admin/orders/list
+  url: {{host}}/admin/orders/list?search=76774504
   body: none
   auth: inherit
 }
 
+params:query {
+  search: 76774504
+  ~status: In progress
+}
+
 settings {
   encodeUrl: true
+  timeout: 0
 }

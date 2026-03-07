@@ -12,18 +12,31 @@ export const getOrdersStats = async (
   res: Response,
 ) => {
   try {
-    const [total, completed, pending, cancelled] = await Promise.all([
+    const [
+      total,
+      completed,
+      pending,
+      cancelled,
+      inProgress,
+      partial,
+      processing,
+      refunded,
+    ] = await Promise.all([
       Order.countDocuments({}),
       Order.countDocuments({ status: OrderStatus.COMPLETED }),
       Order.countDocuments({ status: OrderStatus.PENDING }),
       Order.countDocuments({ status: OrderStatus.CANCELLED }),
+      Order.countDocuments({ status: OrderStatus.InProgress }),
+      Order.countDocuments({ status: OrderStatus.Partial }),
+      Order.countDocuments({ status: OrderStatus.Processing }),
+      Order.countDocuments({ status: OrderStatus.REFUNDED }),
     ]);
 
     const stats = {
       total,
       completed,
-      pending,
-      cancelled,
+      pending: pending + inProgress + partial + processing,
+      cancelled: cancelled + refunded,
     };
 
     res.status(200).json({
@@ -57,11 +70,13 @@ export const getOrdersList = async (
     // Search by order ID or link
     if (search) {
       const searchQuery = search.toString().trim();
+      const orConditions: any[] = [
+        { link: { $regex: searchQuery, $options: "i" } },
+      ];
       if (/^\d+$/.test(searchQuery)) {
-        query.orderId = parseInt(searchQuery);
-      } else {
-        query.link = { $regex: searchQuery, $options: "i" };
+        orConditions.push({ orderId: parseInt(searchQuery) });
       }
+      query.$or = orConditions;
     }
 
     // Filter by status

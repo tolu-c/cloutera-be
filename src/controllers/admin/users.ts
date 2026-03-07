@@ -12,6 +12,7 @@ import { UserAccount } from "../../models/userAccount";
 import {
   AdminManageFundAction,
   OrderStatus,
+  UserRole,
   UserStatus,
 } from "../../types/enums";
 import type { PaginatedResponse, UserStats } from "../../types/service.types";
@@ -19,13 +20,18 @@ import { logUserActivity } from "../../utils/activityLogger";
 import { createPaginationQuery } from "../../utils/createPaginationQuery";
 import { handleError } from "../../utils/errorHandler";
 
+const getOneMonthAgo = () => {
+  const date = new Date();
+  date.setMonth(date.getMonth() - 1);
+  return date;
+};
+
 export const getUserStats = async (
   req: AuthenticatedRequest,
   res: Response,
 ) => {
   try {
-    const oneMonthAgo = new Date();
-    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+    const oneMonthAgo = getOneMonthAgo();
 
     const [total, blocked, usersWithRecentOrders] = await Promise.all([
       User.countDocuments({}),
@@ -72,7 +78,7 @@ export const getUserStats = async (
 
 export const getUsers = async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const { page = 1, limit = 50, search, status } = req.query;
+    const { page = 1, limit = 50, search, status, role } = req.query;
 
     const query: any = {};
 
@@ -88,13 +94,9 @@ export const getUsers = async (req: AuthenticatedRequest, res: Response) => {
       ];
     }
 
-    if (
-      status &&
-      [UserStatus.Active, UserStatus.Inactive].includes(
-        status.toString() as UserStatus,
-      )
-    ) {
-      query.status = status;
+    // Role filter
+    if (role && Object.values(UserRole).includes(role.toString() as UserRole)) {
+      query.role = role;
     }
 
     const { pageNum, skipNum, limitNum } = createPaginationQuery(
@@ -102,16 +104,87 @@ export const getUsers = async (req: AuthenticatedRequest, res: Response) => {
       Number(limit),
     );
 
-    const [users, total] = await Promise.all([
-      User.find(query)
-        .sort({ createdAt: -1 })
-        .skip(skipNum)
-        .limit(limitNum)
-        .select(
-          "-emailVerificationToken -emailVerificationExpires -password -__v",
-        ),
-      User.countDocuments(query),
-    ]);
+    let users: any[];
+    let total: number;
+
+    if (status === UserStatus.Active || status === UserStatus.Inactive) {
+      const oneMonthAgo = getOneMonthAgo();
+
+      const matchCondition =
+        status === UserStatus.Active
+          ? { hasRecentOrders: true, isBlocked: false }
+          : { hasRecentOrders: false, isBlocked: false };
+
+      const result = await User.aggregate([
+        { $match: query },
+        {
+          $lookup: {
+            from: "orders",
+            localField: "_id",
+            foreignField: "userId",
+            as: "orders",
+          },
+        },
+        {
+          $addFields: {
+            hasRecentOrders: {
+              $gt: [
+                {
+                  $size: {
+                    $filter: {
+                      input: "$orders",
+                      as: "order",
+                      cond: { $gte: ["$$order.createdAt", oneMonthAgo] },
+                    },
+                  },
+                },
+                0,
+              ],
+            },
+          },
+        },
+        { $match: matchCondition },
+        {
+          $facet: {
+            data: [
+              { $sort: { createdAt: -1 } },
+              { $skip: skipNum },
+              { $limit: limitNum },
+              {
+                $project: {
+                  orders: 0,
+                  hasRecentOrders: 0,
+                  emailVerificationToken: 0,
+                  emailVerificationExpires: 0,
+                  password: 0,
+                  __v: 0,
+                },
+              },
+            ],
+            total: [{ $count: "count" }],
+          },
+        },
+      ]);
+
+      users = result[0]?.data || [];
+      total = result[0]?.total[0]?.count || 0;
+    } else {
+      // Blocked or no status filter — simple find path
+      if (status === UserStatus.Blocked) {
+        query.isBlocked = true;
+      }
+
+      [users, total] = await Promise.all([
+        User.find(query)
+          .sort({ createdAt: -1 })
+          .skip(skipNum)
+          .limit(limitNum)
+          .select(
+            "-emailVerificationToken -emailVerificationExpires -password -__v",
+          ),
+        User.countDocuments(query),
+      ]);
+    }
 
     const totalPages = Math.ceil(total / limitNum);
 
@@ -130,6 +203,7 @@ export const getUsers = async (req: AuthenticatedRequest, res: Response) => {
       filters: {
         search,
         status,
+        role,
       },
     };
 

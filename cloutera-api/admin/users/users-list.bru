@@ -5,16 +5,18 @@ meta {
 }
 
 get {
-  url: {{host}}/admin/users?search=username
+  url: {{host}}/admin/users?status=Active&role=Admin
   body: none
   auth: inherit
 }
 
 params:query {
-  search: username
-  ~status: Active
+  status: Active
+  role: Admin
+  ~search: webdev
 }
 
 settings {
   encodeUrl: true
+  timeout: 0
 }
