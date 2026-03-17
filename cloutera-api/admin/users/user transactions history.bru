@@ -1,0 +1,20 @@
+meta {
+  name: user transactions history
+  type: http
+  seq: 9
+}
+
+get {
+  url: {{host}}/admin/users/:id/transactions
+  body: none
+  auth: inherit
+}
+
+params:path {
+  id: 69b852a838cc1ebc41b4e0a8
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

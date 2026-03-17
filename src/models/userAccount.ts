@@ -37,7 +37,7 @@ const userAccountSchema = new Schema<IUserAccount>(
       min: 0,
     },
     accountLevel: {
-      type: Number,
+      type: String,
       enum: Object.values(AccountLevel),
       default: AccountLevel.LEVEL_1,
     },

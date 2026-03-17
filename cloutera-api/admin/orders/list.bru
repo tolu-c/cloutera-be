@@ -5,13 +5,13 @@ meta {
 }
 
 get {
-  url: {{host}}/admin/orders/list?search=76774504
+  url: {{host}}/admin/orders/list
   body: none
   auth: inherit
 }
 
 params:query {
-  search: 76774504
+  ~search: 76774504
   ~status: In progress
 }
 

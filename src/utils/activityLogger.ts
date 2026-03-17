@@ -8,11 +8,10 @@ export async function logUserActivity(userId: string, action: string) {
     throw new Error("User does not exist");
   }
 
-  const userAction = `${user.firstName} ${user.lastName} ${action}`;
-
   const activity = new Activity({
     userId: user._id,
-    action: userAction,
+    userName: `${user.firstName} ${user.lastName}`,
+    action,
   });
 
   await activity.save();

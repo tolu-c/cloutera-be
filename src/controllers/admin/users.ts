@@ -19,6 +19,12 @@ import type { PaginatedResponse, UserStats } from "../../types/service.types";
 import { logUserActivity } from "../../utils/activityLogger";
 import { createPaginationQuery } from "../../utils/createPaginationQuery";
 import { handleError } from "../../utils/errorHandler";
+import {
+  FundsHistory,
+  TransactionStatus,
+  TransactionType,
+  PaymentMethod,
+} from "../../models/fundHistory";
 
 const getOneMonthAgo = () => {
   const date = new Date();
@@ -547,7 +553,8 @@ export async function adminManageUserBalance(
 
     // Manage user funds
     if (action === AdminManageFundAction.Add) {
-      userAccount.balance = Math.round((userAccount.balance + amount) * 100) / 100;
+      userAccount.balance =
+        Math.round((userAccount.balance + amount) * 100) / 100;
     } else {
       if (userAccount.balance < amount) {
         return handleError(
@@ -556,10 +563,25 @@ export async function adminManageUserBalance(
           `Insufficient balance. Cannot deduct ${amount} from user account`,
         );
       }
-      userAccount.balance = Math.round((userAccount.balance - amount) * 100) / 100;
+      userAccount.balance =
+        Math.round((userAccount.balance - amount) * 100) / 100;
     }
 
     await userAccount.save();
+
+    const balanceBefore = action === AdminManageFundAction.Add
+      ? Math.round((userAccount.balance - amount) * 100) / 100
+      : Math.round((userAccount.balance + amount) * 100) / 100;
+
+    await new FundsHistory({
+      userId: user._id,
+      paymentMethod: PaymentMethod.SYSTEM,
+      amount,
+      status: TransactionStatus.SUCCESSFUL,
+      type: action === AdminManageFundAction.Add ? TransactionType.CREDIT : TransactionType.DEBIT,
+      balanceBefore,
+      balanceAfter: userAccount.balance,
+    }).save();
 
     await logUserActivity(
       user._id as string,
@@ -579,6 +601,85 @@ export async function adminManageUserBalance(
     if (e instanceof ValidationError) {
       return handleError(res, 400, e.message);
     }
+    handleError(res, 500, `Server error: ${e}`);
+  }
+}
+
+export async function adminGetUserTransactionHistory(
+  req: AuthenticatedRequest,
+  res: Response,
+) {
+  try {
+    const { id } = req.params;
+    const {
+      page = 1,
+      limit = 50,
+      search,
+      status,
+      paymentMethod,
+      startDate,
+      endDate,
+
+    } = req.query;
+
+    const user = await findUserById(id);
+
+    if (!user) {
+      return handleError(res, 404, "User not found");
+    }
+
+    const query: any = { userId: user._id };
+
+    if (status && Object.values(TransactionStatus).includes(status as TransactionStatus)) {
+      query.status = status;
+    }
+    if (paymentMethod && Object.values(PaymentMethod).includes(paymentMethod as PaymentMethod)) {
+      query.paymentMethod = paymentMethod;
+    }
+    if (startDate || endDate) {
+      query.createdAt = {};
+      if (startDate) query.createdAt.$gte = new Date(startDate as string);
+      if (endDate) {
+        const end = new Date(endDate as string);
+        end.setHours(23, 59, 59, 999);
+        query.createdAt.$lte = end;
+      }
+    }
+    if (search) {
+      query.transactionId = { $regex: search, $options: "i" };
+    }
+
+    const { pageNum, limitNum, skipNum } = createPaginationQuery(
+      Number(page),
+      Number(limit),
+    );
+
+    const [transactions, total] = await Promise.all([
+      FundsHistory.find(query)
+        .sort({ createdAt: -1 })
+        .skip(skipNum)
+        .limit(limitNum)
+        .select("transactionId paymentMethod amount balanceBefore balanceAfter status createdAt"),
+      FundsHistory.countDocuments(query),
+    ]);
+
+    const totalPages = Math.ceil(total / limitNum);
+
+    res.status(200).json({
+      success: true,
+      message: "Transaction history fetched successfully",
+      data: transactions,
+      pagination: {
+        current: pageNum,
+        pages: totalPages,
+        total,
+        limit: limitNum,
+        hasNext: pageNum < totalPages,
+        hasPrev: pageNum > 1,
+      },
+      filters: { status, paymentMethod, startDate, endDate, search },
+    });
+  } catch (e) {
     handleError(res, 500, `Server error: ${e}`);
   }
 }

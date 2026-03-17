@@ -1,7 +1,8 @@
-import mongoose, { Schema, Document } from "mongoose";
+import mongoose, { type Document, Schema } from "mongoose";
 
 export interface IActivity extends Document {
   userId: mongoose.Types.ObjectId;
+  userName: string;
   action: string;
   createdAt: Date;
 }
@@ -14,6 +15,7 @@ const activitySchema = new Schema<IActivity>(
       required: true,
       index: true,
     },
+    userName: { type: String, required: true },
     action: { type: String, required: true },
   },
   {

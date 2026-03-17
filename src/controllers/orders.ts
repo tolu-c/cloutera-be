@@ -1,14 +1,14 @@
-import { Response } from "express";
-import { AuthenticatedRequest } from "../middleware";
-import { handleError } from "../utils/errorHandler";
-import { Service } from "../models/service";
+import type { Response } from "express";
+import type { AuthenticatedRequest } from "../middleware";
 import { Order } from "../models/orders";
-import { OrderStatus } from "../types/enums";
-import { PaginatedResponse } from "../types/service.types";
-import { deductBalance, refundBalance } from "./userAccount";
-import { logUserActivity } from "../utils/activityLogger";
-import { placePeakerOrder } from "../services/peaker";
+import { Service } from "../models/service";
 import { addOrderToMonitor } from "../services/orderStatusMonitor";
+import { placePeakerOrder } from "../services/peaker";
+import { OrderStatus } from "../types/enums";
+import type { PaginatedResponse } from "../types/service.types";
+import { logUserActivity } from "../utils/activityLogger";
+import { handleError } from "../utils/errorHandler";
+import { deductBalance, refundBalance } from "./userAccount";
 
 export const addOrder = async (req: AuthenticatedRequest, res: Response) => {
   try {
@@ -76,7 +76,7 @@ export const addOrder = async (req: AuthenticatedRequest, res: Response) => {
       return;
     }
 
-    console.log('peaker order id', peakerOrderRes.order);
+    console.log("peaker order id", peakerOrderRes.order);
     // Create order
     const order = new Order({
       orderId: peakerOrderRes.order,

@@ -3,7 +3,11 @@ import { Response } from "express";
 import { handleError } from "../../utils/errorHandler";
 import { Order } from "../../models/orders";
 import User from "../../models/user";
-import { OrderStatus } from "../../types/enums";
+import { OrderStatus, UserRole } from "../../types/enums";
+import { getPeakerBalance } from "../../services/peaker";
+
+// Day name lookup used when building daily trend buckets
+const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 export interface DashboardStats {
   totalCustomers: {
@@ -23,16 +27,30 @@ export interface DashboardStats {
   };
 }
 
-export interface DashboardTrends {
-  thisWeek: DailyData[];
-  lastWeek: DailyData[];
-}
-
+// Leaf type declared first because WeekTotals and WeekData reference it
 interface DailyData {
   day: string;
   orders: number;
   revenue: number;
+  // "customers" here means new user registrations on that day,
+  // not the same as the "active customers" metric in DashboardStats
   customers: number;
+}
+
+interface WeekTotals {
+  customers: number;
+  orders: number;
+  revenue: number;
+}
+
+interface WeekData {
+  totals: WeekTotals;
+  daily: DailyData[];
+}
+
+export interface DashboardTrends {
+  thisWeek: WeekData;
+  lastWeek: WeekData;
 }
 
 // Dashboard stats with week-over-week comparison
@@ -52,110 +70,39 @@ export const getDashboardStats = async (
     const endOfLastWeek = new Date(startOfThisWeek);
     endOfLastWeek.setTime(startOfThisWeek.getTime() - 1);
 
-    // This week data
     const [
       totalCustomers,
-      activeCustomersThisWeek,
+      activeUserIdsThisWeek,
       totalOrdersThisWeek,
-      completedOrdersThisWeek,
-      totalRevenueThisWeek
+      totalRevenueThisWeek,
+      totalOrders,
+      totalRevenueAllTime,
+      activeUserIdsLastWeek,
+      totalOrdersLastWeek,
+      totalRevenueLastWeek,
     ] = await Promise.all([
-      User.countDocuments({}),
-      User.countDocuments({
-        $expr: {
-          $gt: [
-            {
-              $size: {
-                $ifNull: [
-                  {
-                    $filter: {
-                      input: "$orders",
-                      cond: { $gte: ["$$this.createdAt", startOfThisWeek] }
-                    }
-                  },
-                  []
-                ]
-              }
-            },
-            0
-          ]
-        }
-      }),
+      User.countDocuments({ role: UserRole.Customer }),
+      Order.distinct("userId", { createdAt: { $gte: startOfThisWeek } }),
       Order.countDocuments({ createdAt: { $gte: startOfThisWeek } }),
-      Order.countDocuments({
-        createdAt: { $gte: startOfThisWeek },
-        status: OrderStatus.COMPLETED
-      }),
       Order.aggregate([
-        {
-          $match: {
-            createdAt: { $gte: startOfThisWeek },
-            status: OrderStatus.COMPLETED
-          }
-        },
-        {
-          $group: {
-            _id: null,
-            total: { $sum: "$charge" }
-          }
-        }
-      ])
+        { $match: { createdAt: { $gte: startOfThisWeek }, status: OrderStatus.COMPLETED } },
+        { $group: { _id: null, total: { $sum: "$charge" } } },
+      ]),
+      Order.countDocuments({}),
+      Order.aggregate([
+        { $match: { status: OrderStatus.COMPLETED } },
+        { $group: { _id: null, total: { $sum: "$charge" } } },
+      ]),
+      Order.distinct("userId", { createdAt: { $gte: startOfLastWeek, $lte: endOfLastWeek } }),
+      Order.countDocuments({ createdAt: { $gte: startOfLastWeek, $lte: endOfLastWeek } }),
+      Order.aggregate([
+        { $match: { createdAt: { $gte: startOfLastWeek, $lte: endOfLastWeek }, status: OrderStatus.COMPLETED } },
+        { $group: { _id: null, total: { $sum: "$charge" } } },
+      ]),
     ]);
 
-    // Last week data
-    const [
-      activeCustomersLastWeek,
-      totalOrdersLastWeek,
-      completedOrdersLastWeek,
-      totalRevenueLastWeek
-    ] = await Promise.all([
-      User.countDocuments({
-        $expr: {
-          $gt: [
-            {
-              $size: {
-                $ifNull: [
-                  {
-                    $filter: {
-                      input: "$orders",
-                      cond: {
-                        $and: [
-                          { $gte: ["$$this.createdAt", startOfLastWeek] },
-                          { $lte: ["$$this.createdAt", endOfLastWeek] }
-                        ]
-                      }
-                    }
-                  },
-                  []
-                ]
-              }
-            },
-            0
-          ]
-        }
-      }),
-      Order.countDocuments({
-        createdAt: { $gte: startOfLastWeek, $lte: endOfLastWeek }
-      }),
-      Order.countDocuments({
-        createdAt: { $gte: startOfLastWeek, $lte: endOfLastWeek },
-        status: OrderStatus.COMPLETED
-      }),
-      Order.aggregate([
-        {
-          $match: {
-            createdAt: { $gte: startOfLastWeek, $lte: endOfLastWeek },
-            status: OrderStatus.COMPLETED
-          }
-        },
-        {
-          $group: {
-            _id: null,
-            total: { $sum: "$charge" }
-          }
-        }
-      ])
-    ]);
+    const activeCustomersThisWeek = activeUserIdsThisWeek.length;
+    const activeCustomersLastWeek = activeUserIdsLastWeek.length;
 
     const revenueThisWeek = totalRevenueThisWeek[0]?.total || 0;
     const revenueLastWeek = totalRevenueLastWeek[0]?.total || 0;
@@ -174,21 +121,18 @@ export const getDashboardStats = async (
       totalCustomers: {
         current: totalCustomers,
         active: activeCustomersThisWeek,
-        percentageChange: Math.round(customerChange)
+        percentageChange: Math.round(customerChange),
       },
       totalOrders: {
-        current: await Order.countDocuments({}),
+        current: totalOrders,
         active: totalOrdersThisWeek,
-        percentageChange: Math.round(orderChange)
+        percentageChange: Math.round(orderChange),
       },
       totalRevenue: {
-        current: (await Order.aggregate([
-          { $match: { status: OrderStatus.COMPLETED } },
-          { $group: { _id: null, total: { $sum: "$charge" } } }
-        ]))[0]?.total || 0,
+        current: totalRevenueAllTime[0]?.total || 0,
         active: revenueThisWeek,
-        percentageChange: Math.round(revenueChange)
-      }
+        percentageChange: Math.round(revenueChange),
+      },
     };
 
     res.status(200).json({
@@ -208,66 +152,96 @@ export const getDashboardTrends = async (
 ) => {
   try {
     const now = new Date();
-    const trends: DashboardTrends = {
-      thisWeek: [],
-      lastWeek: []
-    };
 
-    // Generate data for both weeks
-    for (let week = 0; week < 2; week++) {
-      const weekData: DailyData[] = [];
+    // thisWeek = last 7 days (days 0–6 ago), lastWeek = 7 days before that (days 7–13 ago)
+    const startOfThisWeek = new Date(now);
+    startOfThisWeek.setDate(now.getDate() - 6);
+    startOfThisWeek.setHours(0, 0, 0, 0);
 
-      for (let day = 0; day < 7; day++) {
-        const targetDate = new Date(now);
-        targetDate.setDate(now.getDate() - (week * 7) - (6 - day));
+    const startOfLastWeek = new Date(startOfThisWeek);
+    startOfLastWeek.setDate(startOfThisWeek.getDate() - 7);
 
-        const startOfDay = new Date(targetDate);
-        startOfDay.setHours(0, 0, 0, 0);
+    const endOfLastWeek = new Date(startOfThisWeek);
+    endOfLastWeek.setTime(startOfThisWeek.getTime() - 1);
 
-        const endOfDay = new Date(targetDate);
-        endOfDay.setHours(23, 59, 59, 999);
+    // Group by ISO date string so results are easy to key in JavaScript.
+    // Three pipelines replace 14 × 3 = 42 sequential round-trips.
+    const dateGroup = { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } };
 
-        const [dayOrders, dayRevenue, dayCustomers] = await Promise.all([
-          Order.countDocuments({
-            createdAt: { $gte: startOfDay, $lte: endOfDay }
-          }),
-          Order.aggregate([
-            {
-              $match: {
-                createdAt: { $gte: startOfDay, $lte: endOfDay },
-                status: OrderStatus.COMPLETED
-              }
-            },
-            { $group: { _id: null, total: { $sum: "$charge" } } }
-          ]),
-          User.countDocuments({
-            createdAt: { $gte: startOfDay, $lte: endOfDay }
-          })
-        ]);
+    const [ordersByDay, revenueByDay, newUsersByDay] = await Promise.all([
+      Order.aggregate([
+        { $match: { createdAt: { $gte: startOfLastWeek, $lte: now } } },
+        { $group: { _id: dateGroup, orders: { $sum: 1 } } },
+      ]),
+      Order.aggregate([
+        {
+          $match: {
+            createdAt: { $gte: startOfLastWeek, $lte: now },
+            status: OrderStatus.COMPLETED,
+          },
+        },
+        { $group: { _id: dateGroup, revenue: { $sum: "$charge" } } },
+      ]),
+      User.aggregate([
+        { $match: { createdAt: { $gte: startOfLastWeek, $lte: now } } },
+        { $group: { _id: dateGroup, customers: { $sum: 1 } } },
+      ]),
+    ]);
 
-        const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    // Index aggregation results by date string for O(1) lookup
+    const ordersMap = new Map(ordersByDay.map((r) => [r._id, r.orders as number]));
+    const revenueMap = new Map(revenueByDay.map((r) => [r._id, r.revenue as number]));
+    const usersMap = new Map(newUsersByDay.map((r) => [r._id, r.customers as number]));
 
-        weekData.push({
-          day: dayNames[targetDate.getDay()],
-          orders: dayOrders,
-          revenue: dayRevenue[0]?.total || 0,
-          customers: dayCustomers
+    // Pivot flat aggregation results into the thisWeek / lastWeek structure
+    const buildWeekData = (weekStart: Date): WeekData => {
+      const daily: DailyData[] = [];
+
+      for (let i = 0; i < 7; i++) {
+        const date = new Date(weekStart);
+        date.setDate(weekStart.getDate() + i);
+
+        const dateKey = date.toISOString().slice(0, 10); // "YYYY-MM-DD"
+        daily.push({
+          day: DAY_NAMES[date.getDay()],
+          orders: ordersMap.get(dateKey) ?? 0,
+          revenue: revenueMap.get(dateKey) ?? 0,
+          customers: usersMap.get(dateKey) ?? 0,
         });
       }
 
-      if (week === 0) {
-        trends.thisWeek = weekData;
-      } else {
-        trends.lastWeek = weekData;
-      }
-    }
+      const totals: WeekTotals = {
+        customers: daily.reduce((sum, d) => sum + d.customers, 0),
+        orders: daily.reduce((sum, d) => sum + d.orders, 0),
+        revenue: daily.reduce((sum, d) => sum + d.revenue, 0),
+      };
+
+      return { totals, daily };
+    };
+
+    const thisWeek = buildWeekData(startOfThisWeek);
+    const lastWeek = buildWeekData(startOfLastWeek);
 
     res.status(200).json({
       message: "Dashboard trends fetched successfully",
       success: true,
-      data: trends
+      data: { thisWeek, lastWeek } satisfies DashboardTrends,
     });
   } catch (e) {
     handleError(res, 500, `Server error: ${e}`);
   }
 };
+
+export async function getAdminPeakerBalance(req: AuthenticatedRequest, res: Response) {
+  try {
+    const balance = await getPeakerBalance();
+    
+    res.status(200).json({
+      message: "Peaker balance fetched successfully",
+      success: true,
+      data: balance,
+    });
+  } catch (e) {
+    handleError(res, 500, `Server error: ${e}`);
+  }
+}

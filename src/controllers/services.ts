@@ -3,6 +3,7 @@ import { handleError } from "../utils/errorHandler";
 import { Service } from "../models/service";
 import { PaginatedResponse } from "../types/service.types";
 
+// TODO: search for service id as well
 export const getAllServices = async (req: Request, res: Response) => {
   try {
     const {

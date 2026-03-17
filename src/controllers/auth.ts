@@ -268,7 +268,7 @@ export const resetPassword = async (req: Request, res: Response) => {
       message: "Password reset successfully",
     });
   } catch (e) {
-    handleError(res, 500, "Server error");
+    handleError(res, 500, `Server error: ${e}`);
   }
 };
 
@@ -305,7 +305,7 @@ export const resendVerificationEmail = async (req: Request, res: Response) => {
       message: "Verification email sent",
     });
   } catch (e) {
-    handleError(res, 500, "Server error");
+    handleError(res, 500, `Server error: ${e}`);
   }
 };
 
@@ -323,7 +323,7 @@ export const checkUsername = async (req: Request, res: Response) => {
       message: "Username is available",
     });
   } catch (e) {
-    handleError(res, 500, "Server error");
+    handleError(res, 500, `Server error: ${e}`);
   }
 };
 
@@ -388,7 +388,7 @@ export const loginWith2FA = async (req: Request, res: Response) => {
       },
     });
   } catch (e) {
-    handleError(res, 500, "Server error");
+    handleError(res, 500, `Server error: ${e}`);
   }
 };
 

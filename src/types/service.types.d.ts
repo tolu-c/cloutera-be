@@ -1,4 +1,4 @@
-import { Sort } from "./enums";
+import type { Sort } from "./enums";
 
 export interface ExternalServiceResponse {
   service: number;

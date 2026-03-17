@@ -1,9 +1,9 @@
-import { AuthenticatedRequest } from "../../middleware";
-import { Response } from "express";
-import { handleError } from "../../utils/errorHandler";
-import { createPaginationQuery } from "../../utils/createPaginationQuery";
+import type { Response } from "express";
+import type { AuthenticatedRequest } from "../../middleware";
 import { Activity } from "../../models/activity";
-import { PaginatedResponse } from "../../types/service.types";
+import type { PaginatedResponse } from "../../types/service.types";
+import { createPaginationQuery } from "../../utils/createPaginationQuery";
+import { handleError } from "../../utils/errorHandler";
 
 export async function getUserActivities(
   req: AuthenticatedRequest,

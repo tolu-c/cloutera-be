@@ -2,9 +2,11 @@ import express from "express";
 import {
   getDashboardStats,
   getDashboardTrends,
+  getAdminPeakerBalance,
 } from "../controllers/admin/dashboard";
 import { getOrdersList, getOrdersStats } from "../controllers/admin/orders";
 import {
+  adminGetUserTransactionHistory,
   adminManageUserBalance,
   deleteUser,
   getCustomerAccountStatus,
@@ -25,11 +27,21 @@ router.get("/users/:id", authenticateAdmin, getUserById);
 router.patch("/users/:id/block", authenticateAdmin, toggleBlockUser);
 router.get("/users/:id/orders", authenticateAdmin, getUserOrders);
 router.get("/users/:id/account", authenticateAdmin, getCustomerAccountStatus);
+router.get(
+  "/users/:id/transactions",
+  authenticateAdmin,
+  adminGetUserTransactionHistory,
+);
 router.delete("/users/:id/delete", authenticateAdmin, deleteUser);
-router.post("/users/:id/manage-balance", authenticateAdmin, adminManageUserBalance);
+router.post(
+  "/users/:id/manage-balance",
+  authenticateAdmin,
+  adminManageUserBalance,
+);
 router.get("/orders/list", authenticateAdmin, getOrdersList);
 router.get("/orders/stats", authenticateAdmin, getOrdersStats);
 router.get("/dashboard/stats", authenticateAdmin, getDashboardStats);
 router.get("/dashboard/trends", authenticateAdmin, getDashboardTrends);
+router.get("/dashboard/peaker-balance", authenticateAdmin, getAdminPeakerBalance);
 
 export default router;

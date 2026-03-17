@@ -1,10 +1,10 @@
-import { AuthenticatedRequest } from "../../middleware";
-import { Response } from "express";
-import { handleError } from "../../utils/errorHandler";
+import type { Response } from "express";
+import type { AuthenticatedRequest } from "../../middleware";
 import { Order } from "../../models/orders";
 import { OrderStatus } from "../../types/enums";
-import { PaginatedResponse } from "../../types/service.types";
+import type { PaginatedResponse } from "../../types/service.types";
 import { createPaginationQuery } from "../../utils/createPaginationQuery";
+import { handleError } from "../../utils/errorHandler";
 
 // orders stats => all, completed, pending, cancelled
 export const getOrdersStats = async (

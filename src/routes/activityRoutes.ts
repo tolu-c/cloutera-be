@@ -1,9 +1,9 @@
 import express from "express";
-import { authenticateAdmin } from "../middleware";
 import {
   adminGetUserActivities,
   getUserActivities,
 } from "../controllers/admin/activity";
+import { authenticateAdmin } from "../middleware";
 
 const router = express.Router();
 

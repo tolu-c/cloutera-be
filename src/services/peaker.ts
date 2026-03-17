@@ -27,19 +27,25 @@ export const fetchAndSaveServices = async () => {
 
     const services = response.data;
 
-    await Service.deleteMany({});
-    await Service.insertMany(
+    await Service.bulkWrite(
       services.map((s) => ({
-        serviceId: s.service,
-        name: s.name,
-        type: s.type,
-        category: s.category,
-        // rate: s.rate,
-        rate: String(Number(s.rate) * 0.1 + Number(s.rate)),
-        min: s.min,
-        max: s.max,
-        refill: s.refill,
-        cancel: s.cancel,
+        updateOne: {
+          filter: { serviceId: s.service },
+          update: {
+            $set: {
+              name: s.name,
+              type: s.type,
+              category: s.category,
+              rate: String(Number(s.rate) * 0.1 + Number(s.rate)),
+              min: s.min,
+              max: s.max,
+              refill: s.refill,
+              cancel: s.cancel,
+              lastUpdated: new Date(),
+            },
+          },
+          upsert: true,
+        },
       })),
     );
 

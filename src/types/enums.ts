@@ -25,11 +25,11 @@ export enum OrderStatus {
 }
 
 export enum AccountLevel {
-  LEVEL_1 = 1,
-  LEVEL_2 = 2,
-  LEVEL_3 = 3,
-  LEVEL_4 = 4,
-  LEVEL_5 = 5,
+  LEVEL_1 = "LEVEL_1",
+  LEVEL_2 = "LEVEL_2",
+  LEVEL_3 = "LEVEL_3",
+  LEVEL_4 = "LEVEL_4",
+  LEVEL_5 = "LEVEL_5",
 }
 
 export enum AdminManageFundAction {
