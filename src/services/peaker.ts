@@ -1,12 +1,12 @@
-import axios, { AxiosResponse } from "axios";
-import { ExternalServiceResponse } from "../types/service.types";
+import axios, { type AxiosResponse } from "axios";
+import { API_URL, getPeakerApiKey } from "../constants";
 import { Service } from "../models/service";
-import { getPeakerApiKey, API_URL } from "../constants";
-import {
+import type {
   MultipleOrderStatus,
   PeakerBalance,
   PeakerOrderStatus,
 } from "../types/order.types";
+import type { ExternalServiceResponse } from "../types/service.types";
 
 export const fetchAndSaveServices = async () => {
   try {

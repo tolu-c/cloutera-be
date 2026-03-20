@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import type { Response } from "express";
 import type { AuthenticatedRequest } from "../middleware";
 import { Order } from "../models/orders";
@@ -82,6 +83,7 @@ export const addOrder = async (req: AuthenticatedRequest, res: Response) => {
       orderId: peakerOrderRes.order,
       userId: user.userId,
       serviceId: service._id,
+      serviceExternalId: service.serviceId,
       link,
       quantity,
       charge,
@@ -133,7 +135,7 @@ export const getUserOrders = async (
       return;
     }
 
-    const query: any = { userId: user.userId };
+    const query: any = { userId: new mongoose.Types.ObjectId(user.userId) };
 
     // Search by order ID or link
     if (search) {
@@ -154,7 +156,7 @@ export const getUserOrders = async (
 
     // Service filter
     if (serviceId) {
-      query.serviceId = serviceId;
+      query.serviceId = new mongoose.Types.ObjectId(serviceId as string);
     }
 
     // Charge range filter
@@ -187,12 +189,45 @@ export const getUserOrders = async (
     const skipNum = (pageNum - 1) * limitNum;
 
     const [orders, total] = await Promise.all([
-      Order.find(query)
-        .populate("serviceId", "name type category rate serviceId")
-        .sort({ createdAt: -1 })
-        .skip(skipNum)
-        .limit(limitNum)
-        .select("-__v"),
+      Order.aggregate([
+        { $match: query },
+        { $sort: { createdAt: -1 } },
+        { $skip: skipNum },
+        { $limit: limitNum },
+        {
+          $lookup: {
+            from: "services",
+            localField: "serviceExternalId",
+            foreignField: "serviceId",
+            as: "serviceData",
+          },
+        },
+        {
+          $unwind: {
+            path: "$serviceData",
+            preserveNullAndEmptyArrays: true,
+          },
+        },
+        {
+          $addFields: {
+            serviceId: {
+              $cond: {
+                if: "$serviceData",
+                then: {
+                  _id: "$serviceData._id",
+                  name: "$serviceData.name",
+                  type: "$serviceData.type",
+                  category: "$serviceData.category",
+                  rate: "$serviceData.rate",
+                  serviceId: "$serviceData.serviceId",
+                },
+                else: null,
+              },
+            },
+          },
+        },
+        { $project: { __v: 0, serviceData: 0 } },
+      ]),
       Order.countDocuments(query),
     ]);
 

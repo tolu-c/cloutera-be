@@ -5,6 +5,7 @@ export interface IOrder extends Document {
   orderId: number;
   userId: mongoose.Types.ObjectId;
   serviceId: mongoose.Types.ObjectId;
+  serviceExternalId?: number;
   link: string;
   quantity: number;
   charge: number;
@@ -30,6 +31,7 @@ const orderSchema = new Schema<IOrder>(
       required: true,
       index: true,
     },
+    serviceExternalId: { type: Number, index: true },
     link: { type: String, required: true },
     quantity: { type: Number, required: true, min: 1 },
     charge: { type: Number, required: true, min: 0 },

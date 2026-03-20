@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import type { Response } from "express";
 import type { AuthenticatedRequest } from "../../middleware";
 import { Order } from "../../models/orders";
@@ -86,7 +87,7 @@ export const getOrdersList = async (
 
     // Filter by user ID
     if (userId) {
-      query.userId = userId;
+      query.userId = new mongoose.Types.ObjectId(userId as string);
     }
 
     const { pageNum, limitNum, skipNum } = createPaginationQuery(
@@ -99,19 +100,70 @@ export const getOrdersList = async (
     sortConfig[sortBy.toString()] = sortOrder === "asc" ? 1 : -1;
 
     const [orders, total] = await Promise.all([
-      Order.find(query)
-        .populate("userId", "firstName lastName email _id")
-        .populate({
-          path: "serviceId",
-          select: "name serviceId type category",
-          options: { strictPopulate: false },
-        })
-        // .populate('serviceId', 'name type category rate serviceId')
-        .sort(sortConfig)
-        .skip(skipNum)
-        .limit(limitNum)
-
-        .select("-__v"),
+      Order.aggregate([
+        { $match: query },
+        { $sort: sortConfig },
+        { $skip: skipNum },
+        { $limit: limitNum },
+        {
+          $lookup: {
+            from: "users",
+            localField: "userId",
+            foreignField: "_id",
+            as: "userData",
+          },
+        },
+        {
+          $unwind: {
+            path: "$userData",
+            preserveNullAndEmptyArrays: true,
+          },
+        },
+        {
+          $lookup: {
+            from: "services",
+            localField: "serviceExternalId",
+            foreignField: "serviceId",
+            as: "serviceData",
+          },
+        },
+        {
+          $unwind: {
+            path: "$serviceData",
+            preserveNullAndEmptyArrays: true,
+          },
+        },
+        {
+          $addFields: {
+            userId: {
+              $cond: {
+                if: "$userData",
+                then: {
+                  _id: "$userData._id",
+                  firstName: "$userData.firstName",
+                  lastName: "$userData.lastName",
+                  email: "$userData.email",
+                },
+                else: "$userId",
+              },
+            },
+            serviceId: {
+              $cond: {
+                if: "$serviceData",
+                then: {
+                  _id: "$serviceData._id",
+                  name: "$serviceData.name",
+                  serviceId: "$serviceData.serviceId",
+                  type: "$serviceData.type",
+                  category: "$serviceData.category",
+                },
+                else: null,
+              },
+            },
+          },
+        },
+        { $project: { __v: 0, userData: 0, serviceData: 0 } },
+      ]),
       Order.countDocuments(query),
     ]);
 

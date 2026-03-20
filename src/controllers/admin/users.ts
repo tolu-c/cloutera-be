@@ -3,6 +3,7 @@
 // single user
 // block and unblock user
 
+import mongoose from "mongoose";
 import type { Response } from "express";
 import { findUserById } from "../../helpers";
 import type { AuthenticatedRequest } from "../../middleware";
@@ -315,7 +316,7 @@ export const getUserOrders = async (
 
     // Service filter
     if (serviceId) {
-      query.serviceId = serviceId;
+      query.serviceId = new mongoose.Types.ObjectId(serviceId as string);
     }
 
     // Charge range filter
@@ -348,12 +349,45 @@ export const getUserOrders = async (
     );
 
     const [orders, total] = await Promise.all([
-      Order.find(query)
-        .populate("serviceId", "name type category rate serviceId")
-        .sort({ createdAt: -1 })
-        .skip(skipNum)
-        .limit(limitNum)
-        .select("-__v"),
+      Order.aggregate([
+        { $match: query },
+        { $sort: { createdAt: -1 } },
+        { $skip: skipNum },
+        { $limit: limitNum },
+        {
+          $lookup: {
+            from: "services",
+            localField: "serviceExternalId",
+            foreignField: "serviceId",
+            as: "serviceData",
+          },
+        },
+        {
+          $unwind: {
+            path: "$serviceData",
+            preserveNullAndEmptyArrays: true,
+          },
+        },
+        {
+          $addFields: {
+            serviceId: {
+              $cond: {
+                if: "$serviceData",
+                then: {
+                  _id: "$serviceData._id",
+                  name: "$serviceData.name",
+                  type: "$serviceData.type",
+                  category: "$serviceData.category",
+                  rate: "$serviceData.rate",
+                  serviceId: "$serviceData.serviceId",
+                },
+                else: null,
+              },
+            },
+          },
+        },
+        { $project: { __v: 0, serviceData: 0 } },
+      ]),
       Order.countDocuments(query),
     ]);
 
